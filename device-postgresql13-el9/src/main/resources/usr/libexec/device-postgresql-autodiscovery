@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script autogenerates any required postgresql instances.
+
+
