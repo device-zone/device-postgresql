@@ -91,7 +91,7 @@
               <sources>
                 <source>
                   <location>target/classes/usr/libexec/device-postgresql-autodiscovery</location>
-                  <destination>device-postgreqsl-autodiscovery</destination>
+                  <destination>device-postgresql-autodiscovery</destination>
                 </source>
               </sources>
             </mapping>
