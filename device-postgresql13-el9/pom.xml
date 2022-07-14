@@ -83,7 +83,7 @@
           </defineStatements>
           <mappings>
             <mapping>
-		    <directory>/usr/libexec/device</directory>
+              <directory>/usr/libexec/</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>755</filemode>
               <username>root</username>
@@ -105,6 +105,38 @@
                 <source>
                   <location>target/classes/usr/lib/systemd/system/postgresql-autodiscovery.service</location>
                   <destination>postgresql-autodiscovery.service</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/device/services/db-server/postgresql/database</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>2775</filemode>
+              <username>root</username>
+              <groupname>device</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db-server/postgresql/database</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db-server/postgresql/database</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db-server/postgresql/database/add</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db-server/postgresql/database/remove</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db-server/postgresql/database/set</location>
                 </source>
               </sources>
             </mapping>

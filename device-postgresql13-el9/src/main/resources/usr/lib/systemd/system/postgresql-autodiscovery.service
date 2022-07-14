@@ -10,8 +10,9 @@ After=firewalld.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash /usr/libexec/device/device-postgresql-autodiscovery
-ExecReload=/bin/bash /usr/libexec/device/device-postgresql-autodiscovery
+Environment=PGDATA=/var/lib/pgsql/data
+ExecStart=/bin/bash /usr/libexec/device-postgresql-autodiscovery
+ExecReload=/bin/bash /usr/libexec/device-postgresql-autodiscovery
 RemainAfterExit=on
 
 [Install]

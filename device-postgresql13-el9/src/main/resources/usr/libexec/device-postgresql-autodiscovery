@@ -7,3 +7,20 @@
 # This script autogenerates any required postgresql instances.
 
 
+#
+# Data directory does not exist, bail out
+if test ! -d "${PGDATA}"; then
+  echo "Data directory does not exist, postgresql configuration skipped."
+  exit 1
+fi
+
+#
+# Data directory exists but is empty, we need to initialise
+
+if test -n "$(find ${PGDATA} -maxdepth 0 -empty)" ; then
+  /usr/bin/postgresql-setup --initdb
+fi
+
+#
+# Configure postgresql
+
