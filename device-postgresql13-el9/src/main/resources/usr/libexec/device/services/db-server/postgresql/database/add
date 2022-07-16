@@ -10,13 +10,13 @@ trap 'rm -rf -- "${tmpdir}"' EXIT
 
 if [ "$1" == "--" ]; then
 
-  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale "$@"
+  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale --required --user-group postgres --user local-owner "$@"
 
   /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-postdiscovery.service
 
 elif [ "$1" == "-c" ]; then
 
-  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale "$@"
+  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale --required --user-group postgres --user local-owner "$@"
 
 fi
 
