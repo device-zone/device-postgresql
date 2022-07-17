@@ -1,0 +1,20 @@
+# systemd service for managing all postgresql postconfiguration.
+  
+[Unit]
+Description=Postgresql Configuration Postdiscovery
+#Requires=postgresql.target
+PartOf=postgresql.target
+ReloadPropagatedFrom=postgresql.service
+After=postgresql@.service
+After=firewalld.service
+
+[Service]
+Type=oneshot
+Environment=PGDATA=/var/lib/pgsql/data
+ExecStart=/bin/bash /usr/libexec/device-postgresql-postdiscovery
+ExecReload=/bin/bash /usr/libexec/device-postgresql-postdiscovery
+RemainAfterExit=on
+
+[Install]
+WantedBy=multi-user.target
+

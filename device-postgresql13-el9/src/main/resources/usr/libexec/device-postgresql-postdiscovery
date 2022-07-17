@@ -1,0 +1,67 @@
+#!/bin/bash
+  
+#
+# Postgresql Postdiscovery
+# ========================
+#
+# This script autogenerates any required postgresql databases.
+
+set -e
+
+#
+# Data directory does not exist, bail out
+if test ! -d "${PGDATA}"; then
+  echo "Data directory does not exist, postgresql configuration skipped."
+  exit 1
+fi
+
+
+#
+# Silence warnings with runuser.
+cd /tmp
+
+
+#
+# Add/remove postgresql databases
+
+find /etc/device/services/db-server/postgresql/database/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  # add new databases
+  if test -f "$line/added"; then
+
+    role="$(head $line/local-owner.txt)"
+    locale="$(head $line/locale.txt)"
+    database="$(head $line/name.txt)"
+
+    # add local user if needed
+    role="$(head $line/local-owner.txt)"
+    echo "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} WITH LOGIN CREATEDB; END IF; END \$\$;" | runuser -u postgres -- /usr/bin/psql  > /dev/null 2>&1
+
+    # database already exist? mark as an error and do nothing
+    runuser -u postgres -- /usr/bin/psql -tc "SELECT 1 FROM pg_database WHERE datname = '${name}'" | grep -q 1 && echo "Database already exists" > "$line/error" && rm -f "$line/added" && exit 1
+
+    # add database
+    runuser -u postgres -- /usr/bin/createdb --owner="${role}" --locale="${locale}" --template=template0 "${database}"
+
+    rm -f "$line/added"
+  fi
+
+  # remove old databases
+  if test -f "$line/removed"; then
+
+    database="$(head $line/name.txt)"
+
+    # remove database, but only if no error was created making the database
+    if test ! -f "$line/error"; then
+      runuser -u postgres -- /usr/bin/dropdb "${database}"
+    fi
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+  fi
+done
+
