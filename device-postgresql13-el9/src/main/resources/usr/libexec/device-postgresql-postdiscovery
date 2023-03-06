@@ -24,7 +24,7 @@ cd /tmp
 #
 # Add/remove postgresql databases
 
-find /etc/device/services/db-server/postgresql/database/ -mindepth 1 -maxdepth 1 -type l | \
+find /etc/device/services/db/postgresql/database/ -mindepth 1 -maxdepth 1 -type l | \
 while read line; do
 
   # add new databases

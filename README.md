@@ -22,7 +22,7 @@ This appliance does the following:
 To add a database called "things", run this.
 
 ```
-[root@server ~]# device services db-server postgresql database add name=things local-owner=things locale=C.utf8 
+[root@server ~]# device services db postgresql database add name=things local-owner=things locale=C.utf8 
 ```
 
 ## remove database
@@ -30,7 +30,7 @@ To add a database called "things", run this.
 To remove a database called "things", run this.
 
 ```
-[root@server ~]# device services db-server postgresql database instance remove things 
+[root@server ~]# device services db postgresql database remove things 
 ```
 
 
