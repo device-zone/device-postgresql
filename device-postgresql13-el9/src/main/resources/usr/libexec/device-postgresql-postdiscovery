@@ -31,8 +31,15 @@ while read line; do
   if test -f "$line/added"; then
 
     role="$(head $line/local-owner.txt)"
-    locale="$(head $line/locale.txt)"
     database="$(head $line/name.txt)"
+
+    if test -f "$line/locale.txt"; then
+      locale="$(head $line/locale.txt)"
+    else
+      locale="POSIX"
+    fi
+
+    encoding="UTF-8"
 
     # add local user if needed
     role="$(head $line/local-owner.txt)"
@@ -42,7 +49,7 @@ while read line; do
     runuser -u postgres -- /usr/bin/psql -tc "SELECT 1 FROM pg_database WHERE datname = '${name}'" | grep -q 1 && echo "Database already exists" > "$line/error" && rm -f "$line/added" && exit 1
 
     # add database
-    runuser -u postgres -- /usr/bin/createdb --owner="${role}" --locale="${locale}" --template=template0 "${database}"
+    runuser -u postgres -- /usr/bin/createdb --owner="${role}" --locale="${locale}" --encoding="${encoding}" --template=template0 "${database}"
 
     rm -f "$line/added"
   fi
