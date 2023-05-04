@@ -29,7 +29,7 @@ while read line; do
     instance="$(head -n 1 $line/instance.d/name.txt)"
   fi
   if test ! -f "$line/instance.d/port.txt"; then
-    port=""
+    port="5432"
   else
     port="$(head -n 1 $line/instance.d/port.txt)"
   fi
@@ -43,7 +43,7 @@ while read line; do
   if test -f "$line/removed"; then
 
     # remove database, but only if no error was created making the database
-    if test -n "${port}" -a ! -f "$line/error"; then
+    if test -n "${instance}" -a ! -f "$line/error"; then
       runuser -u postgres -- /usr/bin/dropdb --port=${port} "${database}"
     fi
 
