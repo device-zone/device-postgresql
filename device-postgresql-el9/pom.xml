@@ -16,12 +16,12 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
-  <artifactId>device-postgresql13</artifactId>
+  <artifactId>device-postgresql</artifactId>
   <groupId>zone.device.platform.el9</groupId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>rpm</packaging>
-  <name>device postgresql13 applicance for el9</name>
-  <description>Packaging for the Postgresql 13 appliance for ${release.distribution}</description>
+  <name>device postgresql applicance for el9</name>
+  <description>Packaging for the Postgresql appliance for ${release.distribution}</description>
   <inceptionYear>2016</inceptionYear>
 
   <build>
