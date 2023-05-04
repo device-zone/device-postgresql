@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [ $# -eq 2 ]; then
+
+  instance="${1}"
+  line="${2}"
+
+  if test ! -f "$line/port.txt"; then
+    port=5432;
+  else
+    port="$(head -n 1 $line/port.txt)"
+  fi
+
+  #
+  # Handle ports
+  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/port ${port}
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
+save
+EOF
+
+  #
+  # Update semanage to set the allowed port
+  /usr/sbin/semanage port -a -t postgresql_port_t -p tcp ${port}
+
+  # reset customisations as follows
+  # semanage port -D -t postgresql_port_t
+
+fi
+

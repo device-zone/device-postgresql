@@ -6,21 +6,173 @@
 #
 # This script autogenerates any required postgresql instances.
 
+set -e
+umask 0007
+
 
 #
-# Data directory does not exist, bail out
-if test ! -d "${PGDATA}"; then
-  echo "Data directory does not exist, postgresql configuration skipped."
-  exit 1
-fi
+# Handle the cleanup
+# ------------------
+cleanup_before_exit () {
+  if [ -d "${tmpdir}" ]; then
+    rm -rf "${tmpdir}"
+  fi
+}
+# be in a temporay workspace (this works on linux and macosx)
+tmpdir=`mktemp -d 2>/dev/null || mktemp -d -t 'tmpdir'`
+# trap catches the exit signal and runs the specified function
+trap cleanup_before_exit EXIT
+# be in our directory
+cd "${tmpdir}"
+
 
 #
-# Data directory exists but is empty, we need to initialise
+# Create instance that does not yet exist
+create_instance() {
+  instance="${1}"
 
-if test -n "$(find ${PGDATA} -maxdepth 0 -empty)" ; then
-  /usr/bin/postgresql-setup --initdb
-fi
+  install -o root -g root -m 755 -d "/etc/systemd/system/postgresql@${instance}.service.d"
+
+  cat >> local.conf <<- EOF
+[Service]
+Environment=PGDATA=/var/lib/pgsql/data-${instance}
+EOF
+
+  install -o root -g root -m 644 local.conf "/etc/systemd/system/postgresql@${instance}.service.d"
+
+  systemctl daemon-reload
+
+  postgresql-setup --initdb --unit="postgresql@${instance}" --port 5432
+}
+
 
 #
-# Configure postgresql
+# Remove existing instance
+remove_instance() {
+  instance="${1}"
+
+  rm -f "/etc/systemd/system/postgresql@${instance}.service.d/local.conf"
+  if test -d "/etc/systemd/system/postgresql@${instance}.service.d"; then
+    rmdir "/etc/systemd/system/postgresql@${instance}.service.d"
+  fi
+
+  if test -d "/var/lib/pgsql/data-${instance}"; then
+    mv --backup=numbered -t "/var/lib/pgsql/backups/" "/var/lib/pgsql/data-${instance}"
+  fi
+}
+
+
+#
+# Per application? Run all scripts
+
+run_scripts() {
+
+  instance="${1}"
+  line="${2}"
+
+  logger -t "postgresql-autodiscovery@${instance}" "running autodiscovery for postgresql instance ${instance}..."
+
+  rm -f "${line}/warning"
+
+  find "$0.d" -type f -executable | sort | \
+  while read x; do
+    "$x" "${instance}" "${line}" < /dev/null || touch error;
+  done
+
+  if test ! -f "error"; then
+    logger -t "postgresql-autodiscovery@${instance}" "completed autodiscovery for postgresql instance ${instance}."
+  else
+    logger -t "postgresql-autodiscovery@${instance}" "failed autodiscovery for postgresql instance ${instance}."
+  fi
+
+}
+
+
+#
+# Add/remove postgres instances
+
+find /etc/device/services/db/postgresql/instance/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  target=$(readlink -f "$line")
+
+  if test ! -f "$line/name.txt"; then
+    continue;
+  fi
+  instance="$(head -n 1 $line/name.txt)"
+
+  # remove old instances
+  if test -f "$line/removed"; then
+
+    logger -t postgresql-autodiscovery "removing postgresql server instance ${instance}..."
+
+    systemctl disable "postgresql@${instance}"
+    systemctl stop "postgresql@${instance}"
+
+    remove_instance "${instance}"
+    logger -t postgresql-autodiscovery "removed postgresql server instance ${instance}."
+
+    # remove folder
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+  # add new instances
+  elif test -f "$line/added"; then
+
+    logger -t postgresql-autodiscovery "creating postgresql server instance ${instance}..."
+    create_instance "${instance}"
+    run_scripts "${instance}" "${line}"
+    logger -t postgresql-autodiscovery "created postgresql server instance ${instance}."
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl disable "postgresql@${instance}"
+      systemctl stop "postgresql@${instance}"
+
+    else
+
+      systemctl enable "postgresql@${instance}"
+      systemctl start "postgresql@${instance}"
+
+    fi
+
+    rm -f "$line/added"
+
+  # update instances
+  elif test -f "$line/updated"; then
+
+    instance="$(head $line/name.txt)"
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl disable "postgresql@${instance}"
+      systemctl stop "postgresql@${instance}"
+
+      run_scripts "${instance}" "${line}"
+
+    else
+
+      run_scripts "${instance}" "${line}"
+
+      systemctl enable "postgresql@${instance}"
+      systemctl start "postgresql@${instance}"
+
+    fi
+
+    rm -f "$line/updated"
+
+  # something we depend on changed
+  else
+
+    instance="$(head $line/name.txt)"
+
+    run_scripts "${instance}" "${line}"
+
+    systemctl try-reload-or-restart "postgresql@${instance}"
+
+  fi
+
+done
+
 

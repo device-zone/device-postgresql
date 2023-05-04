@@ -8,15 +8,17 @@ trap 'rm -rf -- "${tmpdir}"' EXIT
 
 /usr/bin/locale -a > "${tmpdir}/locales.txt"
 
+OPTIONS="--add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale --required --user-group postgres --user local-owner --required --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance"
+
 if [ "$1" == "--" ]; then
 
-  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale --required --user-group postgres --user local-owner "$@"
+  /usr/libexec/device-set ${OPTIONS} "$@"
 
   /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-postdiscovery.service
 
 elif [ "$1" == "-c" ]; then
 
-  /usr/libexec/device-set --add name --sql-id name --select-base "${tmpdir}/locales.txt" --select locale --required --user-group postgres --user local-owner "$@"
+  /usr/libexec/device-set ${OPTIONS} "$@"
 
 fi
 

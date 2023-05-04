@@ -27,6 +27,16 @@ cd /tmp
 find /etc/device/services/db/postgresql/database/ -mindepth 1 -maxdepth 1 -type l | \
 while read line; do
 
+  if test ! -f "$line/instance.d/name.txt" -o ! -f "$line/instance.d/port.txt"; then
+    continue;
+  fi
+  if test ! -f "$line/name.txt"; then
+    continue;
+  fi
+
+  instance="$(head -n 1 $line/instance.d/name.txt)"
+  port="$(head -n 1 $line/instance.d/port.txt)"
+
   # add new databases
   if test -f "$line/added"; then
 
@@ -43,13 +53,13 @@ while read line; do
 
     # add local user if needed
     role="$(head $line/local-owner.txt)"
-    echo "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} WITH LOGIN CREATEDB; END IF; END \$\$;" | runuser -u postgres -- /usr/bin/psql  > /dev/null 2>&1
+    echo "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} WITH LOGIN CREATEDB; END IF; END \$\$;" | runuser -u postgres -- /usr/bin/psql --port=${port}  > /dev/null 2>&1
 
     # database already exist? mark as an error and do nothing
-    runuser -u postgres -- /usr/bin/psql -tc "SELECT 1 FROM pg_database WHERE datname = '${name}'" | grep -q 1 && echo "Database already exists" > "$line/error" && rm -f "$line/added" && exit 1
+    runuser -u postgres -- /usr/bin/psql --port=${port} -tc "SELECT 1 FROM pg_database WHERE datname = '${name}'" | grep -q 1 && echo "Database already exists" > "$line/error" && rm -f "$line/added" && exit 1
 
     # add database
-    runuser -u postgres -- /usr/bin/createdb --owner="${role}" --locale="${locale}" --encoding="${encoding}" --template=template0 "${database}"
+    runuser -u postgres -- /usr/bin/createdb --port=${port} --owner="${role}" --locale="${locale}" --encoding="${encoding}" --template=template0 "${database}"
 
     rm -f "$line/added"
   fi
@@ -61,7 +71,7 @@ while read line; do
 
     # remove database, but only if no error was created making the database
     if test ! -f "$line/error"; then
-      runuser -u postgres -- /usr/bin/dropdb "${database}"
+      runuser -u postgres -- /usr/bin/dropdb --port=${port} "${database}"
     fi
 
     # remove folder

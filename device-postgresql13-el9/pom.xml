@@ -100,6 +100,26 @@
               </sources>
             </mapping>
             <mapping>
+              <directory>/usr/libexec/device-postgresql-autodiscovery.d</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device-postgresql-autodiscovery.d</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-port</location>
+                  <destination>10-port</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
               <directory>/usr/lib/systemd/system</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>644</filemode>
@@ -113,6 +133,38 @@
                 <source>
                   <location>target/classes/usr/lib/systemd/system/postgresql-postdiscovery.service</location>
                   <destination>postgresql-postdiscovery.service</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/device/services/db/postgresql/instance</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>2775</filemode>
+              <username>root</username>
+              <groupname>device</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/instance</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/instance</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/instance/add</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/instance/remove</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/instance/set</location>
                 </source>
               </sources>
             </mapping>
@@ -159,6 +211,7 @@
           </preremoveScriptlet>
           <requires>
             <require>postgresql-server</require>
+            <require>/usr/bin/augtool</require>
           </requires>
         </configuration>
       </plugin>
