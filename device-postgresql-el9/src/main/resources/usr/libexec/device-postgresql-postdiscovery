@@ -9,14 +9,6 @@
 set -e
 
 #
-# Data directory does not exist, bail out
-if test ! -d "${PGDATA}"; then
-  echo "Data directory does not exist, postgresql configuration skipped."
-  exit 1
-fi
-
-
-#
 # Silence warnings with runuser.
 cd /tmp
 
@@ -27,21 +19,43 @@ cd /tmp
 find /etc/device/services/db/postgresql/database/ -mindepth 1 -maxdepth 1 -type l | \
 while read line; do
 
-  if test ! -f "$line/instance.d/name.txt" -o ! -f "$line/instance.d/port.txt"; then
-    continue;
-  fi
   if test ! -f "$line/name.txt"; then
     continue;
   fi
 
-  instance="$(head -n 1 $line/instance.d/name.txt)"
-  port="$(head -n 1 $line/instance.d/port.txt)"
+  if test ! -f "$line/instance.d/name.txt"; then
+    instance=""
+  else
+    instance="$(head -n 1 $line/instance.d/name.txt)"
+  fi
+  if test ! -f "$line/instance.d/port.txt"; then
+    port=""
+  else
+    port="$(head -n 1 $line/instance.d/port.txt)"
+  fi
+  if test ! -f "$line/database-name.txt"; then
+    database="$(head -n 1 $line/name.txt)"
+  else
+    database="$(head -n 1 $line/database-name.txt)"
+  fi
+
+  # remove old databases
+  if test -f "$line/removed"; then
+
+    # remove database, but only if no error was created making the database
+    if test -n "${port}" -a ! -f "$line/error"; then
+      runuser -u postgres -- /usr/bin/dropdb --port=${port} "${database}"
+    fi
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+  fi
 
   # add new databases
   if test -f "$line/added"; then
-
-    role="$(head $line/local-owner.txt)"
-    database="$(head $line/name.txt)"
 
     if test -f "$line/locale.txt"; then
       locale="$(head $line/locale.txt)"
@@ -64,21 +78,5 @@ while read line; do
     rm -f "$line/added"
   fi
 
-  # remove old databases
-  if test -f "$line/removed"; then
-
-    database="$(head $line/name.txt)"
-
-    # remove database, but only if no error was created making the database
-    if test ! -f "$line/error"; then
-      runuser -u postgres -- /usr/bin/dropdb --port=${port} "${database}"
-    fi
-
-    # remove folder
-    target=$(readlink -f "$line")
-    rm -f "${target}"/*
-    rmdir "${target}"
-    rm -f "${line}"
-  fi
 done
 

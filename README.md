@@ -44,18 +44,18 @@ directory, and needs to be removed manually.
 
 ## add database
 
-To add a database called "things", run this.
+To add a database called "things" on the instance "seawitch", run this.
 
 ```
-[root@server ~]# device services db postgresql database add name=things local-owner=things locale=C.utf8 
+[root@server ~]# device services db postgresql database add name=seawitch-things database-name=things local-owner=things locale=C.utf8 
 ```
 
 ## remove database
 
-To remove a database called "things", run this.
+To remove a database called "things" on the instance "seawitch", run this.
 
 ```
-[root@server ~]# device services db postgresql database remove things 
+[root@server ~]# device services db postgresql database remove seawitch-things 
 ```
 
 
