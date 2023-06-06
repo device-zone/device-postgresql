@@ -21,12 +21,5 @@ set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
 save
 EOF
 
-  #
-  # Update semanage to set the allowed port
-  /usr/sbin/semanage port -a -t postgresql_port_t -p tcp ${port}
-
-  # reset customisations as follows
-  # semanage port -D -t postgresql_port_t
-
 fi
 

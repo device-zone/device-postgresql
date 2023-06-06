@@ -30,6 +30,18 @@ cd "${tmpdir}"
 # Create instance that does not yet exist
 create_instance() {
   instance="${1}"
+  line="${2}"
+
+  if test ! -f "$line/port.txt"; then
+    port=5432;
+  else
+    port="$(head -n 1 $line/port.txt)"
+  fi
+
+  # 5432 is already there
+  if test "${port}" != "5432"; then
+    /usr/sbin/semanage port -a -t postgresql_port_t -p tcp ${port}
+  fi
 
   install -o root -g root -m 755 -d "/etc/systemd/system/postgresql@${instance}.service.d"
 
@@ -42,7 +54,7 @@ EOF
 
   systemctl daemon-reload
 
-  postgresql-setup --initdb --unit="postgresql@${instance}" --port 5432
+  postgresql-setup --initdb --unit="postgresql@${instance}" --port "${port}"
 }
 
 
@@ -50,6 +62,7 @@ EOF
 # Remove existing instance
 remove_instance() {
   instance="${1}"
+  line="${2}"
 
   rm -f "/etc/systemd/system/postgresql@${instance}.service.d/local.conf"
   if test -d "/etc/systemd/system/postgresql@${instance}.service.d"; then
@@ -59,6 +72,18 @@ remove_instance() {
   if test -d "/var/lib/pgsql/data-${instance}"; then
     mv --backup=numbered -t "/var/lib/pgsql/backups/" "/var/lib/pgsql/data-${instance}"
   fi
+
+  if test ! -f "$line/port.txt"; then
+    port=5432;
+  else
+    port="$(head -n 1 $line/port.txt)"
+  fi
+
+  # 5432 is already there
+  if test "${port}" != "5432"; then
+    /usr/sbin/semanage port -d -t postgresql_port_t -p tcp ${port}
+  fi
+
 }
 
 
@@ -109,7 +134,7 @@ while read line; do
     systemctl disable "postgresql@${instance}"
     systemctl stop "postgresql@${instance}"
 
-    remove_instance "${instance}"
+    remove_instance "${instance}" "${line}"
     logger -t postgresql-autodiscovery "removed postgresql server instance ${instance}."
 
     # remove folder
@@ -121,7 +146,7 @@ while read line; do
   elif test -f "$line/added"; then
 
     logger -t postgresql-autodiscovery "creating postgresql server instance ${instance}..."
-    create_instance "${instance}"
+    create_instance "${instance}" "${line}"
     run_scripts "${instance}" "${line}"
     logger -t postgresql-autodiscovery "created postgresql server instance ${instance}."
 
