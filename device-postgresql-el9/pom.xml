@@ -83,7 +83,7 @@
           </defineStatements>
           <mappings>
             <mapping>
-              <directory>/usr/libexec/</directory>
+              <directory>/usr/libexec/device-autodiscovery</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>755</filemode>
               <username>root</username>
@@ -91,23 +91,32 @@
               <sources>
                 <source>
                   <location>target/classes/usr/libexec/device-postgresql-autodiscovery</location>
-                  <destination>device-postgresql-autodiscovery</destination>
-                </source>
-                <source>
-                  <location>target/classes/usr/libexec/device-postgresql-postdiscovery</location>
-                  <destination>device-postgresql-postdiscovery</destination>
+                  <destination>postgresql</destination>
                 </source>
               </sources>
             </mapping>
             <mapping>
-              <directory>/usr/libexec/device-postgresql-autodiscovery.d</directory>
+              <directory>/usr/libexec/device-postdiscovery</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-postdiscovery</location>
+                  <destination>postgresql</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device-autodiscovery/postgresql.d</directory>
               <directoryIncluded>true</directoryIncluded>
               <filemode>755</filemode>
               <username>root</username>
               <groupname>root</groupname>
             </mapping>
             <mapping>
-              <directory>/usr/libexec/device-postgresql-autodiscovery.d</directory>
+              <directory>/usr/libexec/device-autodiscovery/postgresql.d</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>755</filemode>
               <username>root</username>
