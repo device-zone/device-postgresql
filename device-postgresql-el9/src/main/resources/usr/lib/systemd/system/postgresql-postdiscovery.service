@@ -5,7 +5,7 @@ Description=Postgresql Configuration Postdiscovery
 #Requires=postgresql.target
 PartOf=postgresql.target
 ReloadPropagatedFrom=postgresql.service
-After=postgresql@.service
+After=postgresql-autodiscovery.service
 After=firewalld.service
 
 [Service]
