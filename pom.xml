@@ -27,6 +27,7 @@
 
   <modules>
     <module>device-postgresql-el9</module>
+    <module>device-postgresql-backup-el9</module>
   </modules>
 
   <build>

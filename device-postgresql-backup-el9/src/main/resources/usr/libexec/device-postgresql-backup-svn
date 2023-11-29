@@ -1,0 +1,60 @@
+#!/bin/bash
+
+if [ $# -eq 2 ]; then
+
+  instance="${1}"
+  line="${2}"
+
+
+  if [ ! -e "$line/database.d/database-name.txt" ]; then
+    echo "Database does not exist" > $line/error
+    continue;
+  fi
+  database="$(head -n 1 $line/database.d/database-name.txt)"
+
+  if [ ! -e "$line/database.d/instance.d/name.txt" ]; then
+    echo "Database instance does not exist" > $line/error
+    continue;
+  fi
+  if [ ! -e "$line/database.d/instance.d/port.txt" ]; then
+    port="5432"
+  else
+    port="$(head -n 1 $line/database.d/instance.d/port.txt)"
+  fi
+
+
+  echo /run/postgresql/.s.PGSQL.${port}
+
+  BACKUP_TARGET=/var/lib/svn
+  POSTGRES_TARGET=$BACKUP_TARGET/postgres
+  BACKUP_SPOOL=/var/spool/backup
+  POSTGRES_SPOOL=$BACKUP_SPOOL/postgres
+
+  # setup
+  if [ ! -d "${BACKUP_TARGET}" ]; then
+    install -m 755 -o root -g root -d "${BACKUP_TARGET}"
+  fi
+  if [ ! -d "${POSTGRES_TARGET}" ]; then
+    install -m 750 -o root -g root -d "${POSTGRES_TARGET}"
+  fi
+
+  if [ ! -d "${BACKUP_SPOOL}" ]; then
+    install -m 755 -o root -g root -d "${BACKUP_SPOOL}"
+  fi
+  if [ ! -d "${POSTGRES_SPOOL}" ]; then
+    install -m 750 -o root -g root -d "${POSTGRES_SPOOL}"
+  fi
+  if [ ! -d "${POSTGRES_SPOOL}/localhost" ]; then
+    install -m 750 -o root -g root -d "${POSTGRES_SPOOL}/localhost"
+  fi
+
+  if [ ! -d "${POSTGRES_TARGET}/${instance}" ]; then
+    /usr/bin/svnadmin create --fs-type=fsfs "${POSTGRES_TARGET}/${instance}"
+  fi
+
+  /sbin/runuser -s /bin/bash -c "nice -n 1 pg_dump --host /run/postgresql/ --port ${port} --clean ${database}" - postgres | \
+    /usr/bin/svnmucc put --message "Automatic Backup `date`" --config-dir /root/.subversion/ -- - file://${POSTGRES_TARGET}/${instance}/${instance}.sql
+
+fi
+
+

@@ -1,0 +1,15 @@
+# systemd service for managing all individual postgresql backups
+  
+[Unit]
+Description=Postgresql Backup - %i
+After=postgresql-postdiscovery.service
+
+[Service]
+Type=oneshot
+Environment=PGDATA=/var/lib/pgsql/data
+ExecStart=/bin/bash /usr/libexec/device-timer/postgresql-backup %i
+ExecReload=/bin/bash /usr/libexec/device-timer/postgresql-backup %i
+
+[Install]
+WantedBy=multi-user.target
+

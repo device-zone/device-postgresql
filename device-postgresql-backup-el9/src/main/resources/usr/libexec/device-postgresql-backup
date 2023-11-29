@@ -1,0 +1,180 @@
+#!/bin/bash
+
+#
+# Postgresql Backup Autodiscovery
+# ===============================
+#
+# This script autogenerates any required postgresql backup timers, and handles each timer.
+
+set -e
+umask 0007
+
+
+#
+# Handle the cleanup
+# ------------------
+cleanup_before_exit () {
+  if [ -d "${tmpdir}" ]; then
+    rm -rf "${tmpdir}"
+  fi
+}
+# be in a temporay workspace (this works on linux and macosx)
+tmpdir=`mktemp -d 2>/dev/null || mktemp -d -t 'tmpdir'`
+# trap catches the exit signal and runs the specified function
+trap cleanup_before_exit EXIT
+# be in our directory
+cd "${tmpdir}"
+
+
+#
+# Create backup timer that does not yet exist
+create_backup() {
+  instance="${1}"
+  line="${2}"
+
+  if test ! -f "$line/interval.txt"; then
+    interval=3600;
+  else
+    interval="$(head -n 1 $line/interval.txt)"
+  fi
+
+  install -o root -g root -m 755 -d "/etc/systemd/system/postgresql-backup@${instance}.timer.d"
+
+  cat >> device.conf <<- EOF
+[Timer]
+OnUnitActiveSec=${interval}
+EOF
+
+  install -o root -g root -m 644 device.conf "/etc/systemd/system/postgresql-backup@${instance}.timer.d"
+
+  systemctl daemon-reload
+
+}
+
+
+#
+# Remove existing backup timer
+remove_backup() {
+  instance="${1}"
+  line="${2}"
+
+  rm -f "/etc/systemd/system/postgresql-backup@${instance}.timer.d/device.conf"
+  if test -d "/etc/systemd/system/postgresql-backup@${instance}.timer.d"; then
+    rmdir "/etc/systemd/system/postgresql-backup@${instance}.timer.d"
+  fi
+
+}
+
+
+#
+# Per application? Run all scripts
+
+run_scripts() {
+
+  instance="${1}"
+  line="${2}"
+
+  logger -t "postgresql-backup@${instance}" "running backup for postgresql database ${instance}..."
+
+  rm -f "${line}/warning"
+
+  find "$0.d" -type f -executable | sort | \
+  while read x; do
+    "$x" "${instance}" "${line}" < /dev/null || touch error;
+  done
+
+  if test ! -f "error"; then
+    logger -t "postgresql-backup@${instance}" "completed backup for postgresql database ${instance}."
+  else
+    logger -t "postgresql-backup@${instance}" "failed backup for postgresql database ${instance}."
+  fi
+
+}
+
+
+#
+# Add/remove postgres backup timers
+
+find /etc/device/services/db/postgresql/backup/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  target=$(readlink -f "$line")
+
+  if test ! -f "$line/name.txt"; then
+    continue;
+  fi
+  instance="$(head -n 1 $line/name.txt)"
+
+  # triggered by a timer?
+  if test -n "${1}" -a "${1}" == "${instance}"; then
+
+    run_scripts "${instance}" "${line}"
+
+    exit 0
+
+  # remove old instances
+  elif test -f "$line/removed"; then
+
+    logger -t postgresql-backup "removing postgresql backup timer ${instance}..."
+
+    systemctl disable "postgresql-backup@${instance}.timer"
+    systemctl stop "postgresql-backup-@${instance}.timer"
+
+    remove_backup "${instance}" "${line}"
+    logger -t postgresql-backup "removed postgresql backup timer ${instance}."
+
+    # remove folder
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+  # add new backup timers
+  elif test -f "$line/added"; then
+
+    logger -t postgresql-backup "creating postgresql backup timer ${instance}..."
+    create_backup "${instance}" "${line}"
+    logger -t postgresql-backup "created postgresql backup timer ${instance}."
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl disable "postgresql-backup@${instance}.timer"
+      systemctl stop "postgresql-backup@${instance}.timer"
+
+    else
+
+      systemctl enable "postgresql-backup@${instance}.timer"
+      systemctl start "postgresql-backup@${instance}.timer"
+
+    fi
+
+    rm -f "$line/added"
+
+  # update backup scripts
+  elif test -f "$line/updated"; then
+
+    instance="$(head $line/name.txt)"
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl disable "postgresql-backup@${instance}.timer"
+      systemctl stop "postgresql-backup@${instance}.timer"
+
+    else
+
+      systemctl enable "postgresql-backup@${instance}.timer"
+      systemctl start "postgresql-backup@${instance}.timer"
+
+    fi
+
+    rm -f "$line/updated"
+
+  # something we depend on changed
+  else
+
+    instance="$(head $line/name.txt)"
+
+  fi
+
+done
+
+
