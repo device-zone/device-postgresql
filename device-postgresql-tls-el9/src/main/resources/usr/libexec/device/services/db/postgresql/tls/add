@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+umask 0002
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf -- "${tmpdir}"' EXIT
+
+OPTIONS="--add instance --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --polar disabled --integer-minimum 0 --integer interval --required --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+  /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-autodiscovery.service
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+

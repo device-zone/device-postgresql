@@ -1,0 +1,66 @@
+#!/bin/bash
+
+#
+# PKI Certificates Autodiscovery - postgresql
+# ===========================================
+#
+# This script detects certificates for postgesql.
+
+set -e
+umask 0027
+
+if test ! -d /run/postgresql/; then
+  exit 0;
+fi
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+uuid="${2}"
+
+#
+# Configure certs/keys
+
+if test "${request}" == "start" -o "${request}" == "reload"; then
+
+  logger -t pki-certificate@${uuid} "importing postgresql server certificate/key..."
+
+  line="/etc/device/system/pki/certificates/${uuid}"
+
+  if test -f "$line/filter-dns.txt"; then
+    filter+=" --filter-hostname=$(head -n 1 $line/filter-dns.txt)"
+  fi
+  if test -f "$line/filter-mail.txt"; then
+    filter+=" --filter-email=$(head -n 1 $line/filter-mail.txt)"
+  fi
+  if test -z "${filter}"; then
+    filter+=" --filter-hostname=$(hostname -f)"
+  fi
+  if test -L "$line/filter-ca-cert.crt"; then
+    pem+=" --pem-in=$line/filter-ca-cert.crt"
+  fi
+
+  redwax-tool ${pem} \
+              --pem-in="/etc/pki/tls/private/*" \
+              --pem-in="/etc/pki/tls/certs/*.pem" \
+              --filter=verify ${filter} \
+              --filter-current \
+              --group-out=postgres \
+	      --cert-out --chain-out --no-key-out \
+              --pem-out="/run/postgresql/server-${uuid}.crt" \
+              --no-cert-out --no-chain-out --key-out \
+              --pem-out="/run/postgresql/server-${uuid}.key" \
+              --cert-out --chain-out --format-out=yaml \
+              --metadata-out="/run/postgresql/server-${uuid}.yaml"
+
+  logger -t pki-certificate@${uuid} "imported postgresql server certificate/key."
+
+elif test "${request}" == "stop"; then
+
+  rm -f "/run/postgresql/server-${uuid}.crt"
+  rm -f "/run/postgresql/server-${uuid}.key"
+  rm -f "/run/postgresql/server-${uuid}.yaml"
+
+fi
+
+

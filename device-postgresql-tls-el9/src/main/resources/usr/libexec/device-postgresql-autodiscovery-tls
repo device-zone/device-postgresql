@@ -1,0 +1,130 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script autogenerates any required TLS configuration.
+
+set -e
+
+#
+# Silence warnings with runuser.
+cd /tmp
+
+#
+# Add/remove TLS
+
+find /etc/device/services/db/postgresql/tls/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/instance.d/name.txt"; then
+    continue;
+  else
+    instance="$(head -n 1 $line/instance.d/name.txt)"
+  fi
+  if test ! -L "$line/certificate.d"; then
+    uuid=""
+  else
+    target=$(readlink -f "$line/certificate.d")
+    uuid="$(basename $target)"
+  fi
+
+  # remove old certificates
+  if test -f "$line/removed"; then
+
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
+save
+EOF
+
+    systemctl try-restart "postgresql@${instance}"
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+  fi
+
+  # add new certificates
+  if test -f "$line/added"; then
+
+    if test -f "$line/disabled.bin" -o -z "${uuid}"; then
+
+      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
+save
+EOF
+
+    else
+
+      #
+      # Handle listen_addresses
+      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key
+save
+EOF
+
+    fi
+
+    systemctl try-restart "postgresql@${instance}"
+
+    rm -f "$line/added"
+
+  fi
+
+  # update certificates
+  if test -f "$line/updated"; then
+
+    if test -f "$line/disabled.bin" -o -z "${uuid}"; then
+
+      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
+save
+EOF
+
+    else
+
+      #
+      # Handle listen_addresses
+      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key
+save
+EOF
+
+    fi
+
+    systemctl try-restart "postgresql@${instance}"
+
+    rm -f "$line/updated"
+
+  fi
+
+done
+
