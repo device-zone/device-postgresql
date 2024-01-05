@@ -129,6 +129,26 @@
               </sources>
             </mapping>
             <mapping>
+              <directory>/usr/libexec/device-postdiscovery/postgresql.d</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device-postdiscovery/postgresql.d</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-postdiscovery-database</location>
+                  <destination>50-database</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
               <directory>/usr/lib/systemd/system</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>644</filemode>

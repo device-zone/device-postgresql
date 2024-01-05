@@ -13,6 +13,7 @@ if [ "$1" == "--" ]; then
   /usr/libexec/device-set ${OPTIONS} "$@"
 
   /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-autodiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-postdiscovery.service
 
 elif [ "$1" == "-c" ]; then
 

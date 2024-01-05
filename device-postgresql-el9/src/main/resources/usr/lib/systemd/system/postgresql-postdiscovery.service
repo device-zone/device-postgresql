@@ -11,8 +11,8 @@ After=firewalld.service
 [Service]
 Type=oneshot
 Environment=PGDATA=/var/lib/pgsql/data
-ExecStart=/bin/bash /usr/libexec/device-postdiscovery/postgresql
-ExecReload=/bin/bash /usr/libexec/device-postdiscovery/postgresql
+ExecStart=/bin/bash /usr/libexec/device-postdiscovery/postgresql start
+ExecReload=/bin/bash /usr/libexec/device-postdiscovery/postgresql reload
 RemainAfterExit=on
 
 [Install]

@@ -109,6 +109,19 @@
               </sources>
             </mapping>
             <mapping>
+              <directory>/usr/libexec/device-postdiscovery/postgresql.d</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-postdiscovery-tls</location>
+                  <destination>90-tls</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
               <directory>/etc/device/services/db/postgresql/tls</directory>
               <directoryIncluded>true</directoryIncluded>
               <filemode>2775</filemode>

@@ -1,0 +1,59 @@
+#!/bin/bash
+  
+#
+# Postgresql Postdiscovery - TLS
+# ==============================
+#
+# This script opens the firewall for all TLS secured instances..
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+#
+# Silence warnings with runuser.
+cd /tmp
+
+#
+# Add/remove TLS
+
+find /etc/device/services/db/postgresql/tls/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/instance.d/name.txt"; then
+    continue;
+  else
+    instance="$(head -n 1 $line/instance.d/name.txt)"
+  fi
+
+  if test ! -f "$line/instance.d/port.txt"; then
+    tlsport="5432"
+  else
+    tlsport="$(head -n 1 $line/instance.d/port.txt)"
+  fi
+
+  if test ! -L "$line/certificate.d"; then
+    uuid=""
+  else
+    target=$(readlink -f "$line/certificate.d")
+    uuid="$(basename $target)"
+  fi
+
+  if test -f "$line/disabled.bin" -o -z "${uuid}"; then
+
+    if command -v /usr/bin/firewall-cmd 2>/dev/null; then
+      logger -t postgresql-postdiscovery "Notice: closing firewall for postgresql port ${tlsport}..."
+      /usr/bin/firewall-cmd --quiet --zone=public --remove-port=${tlsport}/tcp 2> /dev/null || true
+    fi
+
+  else
+
+    if command -v /usr/bin/firewall-cmd 2>/dev/null; then
+      logger -t postgresql-postdiscovery "Notice: opening firewall for postgresql port ${tlsport}..."
+      /usr/bin/firewall-cmd --quiet --zone=public --add-port=${tlsport}/tcp 2> /dev/null || true
+    fi
+
+  fi
+
+done
+
