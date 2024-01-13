@@ -46,6 +46,10 @@ create_instance() {
   install -o root -g root -m 755 -d "/etc/systemd/system/postgresql@${instance}.service.d"
 
   cat >> local.conf <<- EOF
+[Unit]
+Before=postgresql-postdiscovery.service
+After=postgresql-autodiscovery.service
+
 [Service]
 Environment=PGDATA=/var/lib/pgsql/data-${instance}
 EOF
