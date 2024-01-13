@@ -6,7 +6,7 @@ umask 0002
 tmpdir="$(mktemp -d)"
 trap 'rm -rf -- "${tmpdir}"' EXIT
 
-OPTIONS="--show instance --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --show-table instance,certificate,interval --polar disabled --flag X --integer-minimum 0 --integer interval --required --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+OPTIONS="--show instance --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --show-table instance,certificate,ca-certificate,interval --polar disabled --flag X --integer-minimum 0 --integer interval --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --required --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
 
 if [ "$1" == "--" ]; then
 

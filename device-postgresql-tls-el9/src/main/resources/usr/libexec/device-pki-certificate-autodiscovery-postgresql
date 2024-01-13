@@ -40,6 +40,10 @@ if test "${request}" == "start" -o "${request}" == "reload"; then
     pem+=" --pem-in=$line/filter-ca-cert.crt"
   fi
 
+  rm -f "/run/postgresql/server-${uuid}.crt"
+  rm -f "/run/postgresql/server-${uuid}.key"
+  rm -f "/run/postgresql/server-${uuid}.yaml"
+
   redwax-tool ${pem} \
               --pem-in="/etc/pki/tls/private/*" \
               --pem-in="/etc/pki/tls/certs/*.pem" \

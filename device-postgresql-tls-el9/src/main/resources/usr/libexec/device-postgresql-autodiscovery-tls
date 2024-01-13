@@ -12,6 +12,58 @@ set -e
 # Silence warnings with runuser.
 cd /tmp
 
+disable_tls() {
+
+  instance="${1}"
+
+  listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''"
+  ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off"
+  ssl_cert_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file"
+  ssl_key_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file"
+  ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
+
+  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+${listen_addresses}
+${ssl}
+${ssl_cert_file}
+${ssl_key_file}
+${ssl_ca_file}
+save
+EOF
+
+}
+
+enable_tls() {
+
+  instance="${1}"
+  uuid="${2}"
+
+  # enabled until further notice
+  listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'"
+  ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on"
+  ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
+  ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
+  if test -L /run/postgresql/client-ca.crt; then
+    ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
+  else
+    ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
+  fi
+
+  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+${listen_addresses}
+${ssl}
+${ssl_cert_file}
+${ssl_key_file}
+${ssl_ca_file}
+save
+EOF
+
+}
+
 #
 # Add/remove TLS
 
@@ -30,18 +82,15 @@ while read line; do
     uuid="$(basename $target)"
   fi
 
+  rm -f /run/postgresql/client-ca.crt
+  if test -L "$line/ca-certificate.crt"; then
+    cp -a "$line/ca-certificate.crt" /run/postgresql/client-ca.crt
+  fi
+
   # remove old certificates
   if test -f "$line/removed"; then
 
-    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
-set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
-load
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
-save
-EOF
+    disable_tls "${instance}"
 
     systemctl try-restart "postgresql@${instance}"
 
@@ -57,29 +106,11 @@ EOF
 
     if test -f "$line/disabled.bin" -o -z "${uuid}"; then
 
-      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
-set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
-load
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
-save
-EOF
+      disable_tls "${instance}"
 
     else
 
-      #
-      # Handle listen_addresses
-      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
-set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
-load
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key
-save
-EOF
+      enable_tls "${instance}" "${uuid}"
 
     fi
 
@@ -94,29 +125,11 @@ EOF
 
     if test -f "$line/disabled.bin" -o -z "${uuid}"; then
 
-      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
-set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
-load
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file
-rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file
-save
-EOF
+      disable_tls "${instance}"
 
     else
 
-      #
-      # Handle listen_addresses
-      augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
-set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
-load
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key
-save
-EOF
+      enable_tls "${instance}" "${uuid}"
 
     fi
 
