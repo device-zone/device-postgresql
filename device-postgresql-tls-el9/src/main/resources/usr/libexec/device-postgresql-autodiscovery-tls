@@ -45,7 +45,7 @@ enable_tls() {
   ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on"
   ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
   ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
-  if test -L /run/postgresql/client-ca.crt; then
+  if test -f /run/postgresql/client-ca.crt; then
     ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
   else
     ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
@@ -97,7 +97,7 @@ while read line; do
 
     disable_tls "${instance}"
 
-    systemctl try-restart "postgresql@${instance}"
+    systemctl --no-block try-restart "postgresql@${instance}"
 
     # remove folder
     target=$(readlink -f "$line")
@@ -119,7 +119,7 @@ while read line; do
 
     fi
 
-    systemctl try-restart "postgresql@${instance}"
+    systemctl --no-block try-restart "postgresql@${instance}"
 
     rm -f "$line/added"
 
@@ -138,7 +138,7 @@ while read line; do
 
     fi
 
-    systemctl try-restart "postgresql@${instance}"
+    systemctl --no-block try-restart "postgresql@${instance}"
 
     rm -f "$line/updated"
 
