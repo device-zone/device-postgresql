@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# -eq 2 ]; then
+
+  instance="${1}"
+
+  install -m 600 -o postgres -g postgres "${instance}-ident.conf" /var/lib/pgsql/data-${instance}/pg_ident.conf
+
+fi
+

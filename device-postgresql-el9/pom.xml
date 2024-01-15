@@ -126,6 +126,22 @@
                   <location>target/classes/usr/libexec/device-postgresql-autodiscovery-port</location>
                   <destination>10-port</destination>
                 </source>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-hba-make</location>
+                  <destination>10-hba</destination>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-ident-make</location>
+                  <destination>10-ident</destination>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-hba-install</location>
+                  <destination>90-hba</destination>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-ident-install</location>
+                  <destination>90-ident</destination>
+                </source>
               </sources>
             </mapping>
             <mapping>
