@@ -91,7 +91,11 @@
               <sources>
                 <source>
                   <location>target/classes/usr/libexec/device-postgresql-autodiscovery-tls</location>
-                  <destination>90-tls</destination>
+                  <destination>40-tls</destination>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-auth-certificates</location>
+                  <destination>50-auth-certificates</destination>
                 </source>
               </sources>
             </mapping>
@@ -153,6 +157,53 @@
                 </source>
                 <source>
                   <location>target/classes/usr/libexec/device/services/db/postgresql/tls/show</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/tls</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>644</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/tls/protocol.txt</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/device/services/db/postgresql/auth/certificates</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>2775</filemode>
+              <username>root</username>
+              <groupname>device</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/auth/certificates</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/auth/certificates</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/auth/certificates/add</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/auth/certificates/remove</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/auth/certificates/set</location>
+                </source>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/auth/certificates/show</location>
                 </source>
               </sources>
             </mapping>

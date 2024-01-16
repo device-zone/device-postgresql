@@ -1,0 +1,24 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf -- "${tmpdir}"' EXIT
+
+OPTIONS="--add name --hostname name --polar disabled --distinguished-name subject --sql-delimited-id role --required --relation-base /etc/device/services/db/postgresql/tls --relation-name name --relation-suffix .txt --relation tls"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+  /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-autodiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl try-reload-or-restart postgresql-postdiscovery.service
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+
+

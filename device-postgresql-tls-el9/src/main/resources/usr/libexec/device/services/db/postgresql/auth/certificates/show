@@ -1,0 +1,20 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf -- "${tmpdir}"' EXIT
+
+OPTIONS="--show name --hostname name --show-flags disabled --show-table name,tls,subject,role --flag X --polar disabled --distinguished-name subject --sql-delimited-id role --required --relation-base /etc/device/services/db/postgresql/tls --relation-name name --relation-suffix .txt --relation tls"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+

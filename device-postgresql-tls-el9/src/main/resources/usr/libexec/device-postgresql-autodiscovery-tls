@@ -8,10 +8,6 @@
 
 set -e
 
-#
-# Silence warnings with runuser.
-cd /tmp
-
 disable_tls() {
 
   instance="${1}"
@@ -39,12 +35,25 @@ enable_tls() {
 
   instance="${1}"
   uuid="${2}"
+  line="${3}"
+
+  listen_addresses="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses"
+  if test -f "$line/protocol.txt"; then
+    protocol="$(head -n 1 $line/protocol.txt)"
+    if test "${protocol}" == "all"; then
+      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'"
+    elif test "${protocol}" == "ipv4-only"; then
+      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '0.0.0.0'"
+    elif test "${protocol}" == "ipv6-only"; then
+      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '::'"
+    fi
+  fi
 
   # enabled until further notice
-  listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'"
   ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on"
   ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
   ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
+
   if test -f /run/postgresql/client-ca.crt; then
     ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
   else
@@ -85,10 +94,20 @@ while read line; do
   rm -f /run/postgresql/client-ca.crt
   if test -L "$line/ca-certificate.crt"; then
 
+    # write out the ca certificates
     redwax-tool --pem-in="$line/ca-certificate.crt" \
                 --group-out=postgres \
                 --root-out \
                 --pem-out="/run/postgresql/client-ca.crt"
+
+    # update pg_hba.conf
+    cat >> "${instance}-hba.conf" <<- EOF
+# Added by $0 on `date`
+# device services db postgresql tls ca-certificate=*
+#
+hostssl all     all     all     cert    map=certificate clientname=DN
+
+EOF
 
   fi
 
@@ -115,7 +134,7 @@ while read line; do
 
     else
 
-      enable_tls "${instance}" "${uuid}"
+      enable_tls "${instance}" "${uuid}" "${line}"
 
     fi
 
@@ -134,7 +153,7 @@ while read line; do
 
     else
 
-      enable_tls "${instance}" "${uuid}"
+      enable_tls "${instance}" "${uuid}" "${line}"
 
     fi
 

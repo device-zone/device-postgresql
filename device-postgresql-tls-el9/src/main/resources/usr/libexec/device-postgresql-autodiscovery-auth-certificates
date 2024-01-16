@@ -1,0 +1,117 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script autogenerates certificates in pg_ident.conf.
+
+set -e
+
+if test -f /run/postgresql/client-ca.crt; then
+
+  # update pg_ident.conf
+  cat >> "${instance}-ident.conf" <<- EOF
+# Added by $0 on `date`
+# device services db postgresql auth certificates
+#
+
+EOF
+
+else
+
+  # not enabled, leave
+  exit 0
+
+fi
+
+
+add_certificate() {
+
+  instance="${1}"
+  line="${2}"
+
+  role=
+  if test -f "$line/role.txt"; then
+    role="$(head -n 1 $line/role.txt)"
+  fi
+
+  subject=
+  if test -f "$line/subject.txt"; then
+    subject="$(head -n 1 $line/subject.txt)"
+  fi
+
+  if test -n "${subject}" -a -n "${role}"; then
+    # update pg_ident.conf
+    cat >> "${instance}-ident.conf" <<- EOF
+certificate	"${subject}"	"${role}"
+EOF
+  fi
+}
+
+#
+# Add/remove certificate mappings
+
+find /etc/device/services/db/postgresql/auth/certificates/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/tls.d/instance.d/name.txt"; then
+    continue;
+  else
+    instance="$(head -n 1 $line/tls.d/instance.d/name.txt)"
+  fi
+
+  # remove old certificates
+  if test -f "$line/removed"; then
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+  fi
+
+  # add new certificates
+  if test -f "$line/added"; then
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    rm -f "$line/added"
+
+  fi
+
+  # update certificates
+  if test -f "$line/updated"; then
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    rm -f "$line/updated"
+
+  # no changes
+  else
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+  fi
+
+done
+
+

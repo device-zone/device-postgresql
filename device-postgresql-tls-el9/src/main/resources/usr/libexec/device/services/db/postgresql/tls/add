@@ -6,7 +6,7 @@ umask 0002
 tmpdir="$(mktemp -d)"
 trap 'rm -rf -- "${tmpdir}"' EXIT
 
-OPTIONS="--add instance --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --polar disabled --integer-minimum 0 --integer interval --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --required --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+OPTIONS="--add name --hostname name --polar disabled --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --required --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate --select-base /usr/libexec/device/services/db/postgresql/tls/protocol.txt --select protocol"
 
 if [ "$1" == "--" ]; then
 
