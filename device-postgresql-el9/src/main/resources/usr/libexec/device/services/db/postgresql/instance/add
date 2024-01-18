@@ -8,7 +8,7 @@ trap 'rm -rf -- "${tmpdir}"' EXIT
 
 /usr/bin/locale -a > "${tmpdir}/locales.txt"
 
-OPTIONS="--add name --sql-id name --port port"
+OPTIONS="--add name --sql-id name --port port --required --symlink-base /usr/libexec/device/services/db/postgresql/instance/type --symlink-suffix .txt --symlink type"
 
 if [ "$1" == "--" ]; then
 

@@ -58,7 +58,16 @@ EOF
 
   systemctl daemon-reload
 
-  postgresql-setup --initdb --unit="postgresql@${instance}" --port "${port}"
+  # init the database - but only if we are primary
+  if test -L "$line/type.txt"; then
+
+    instancetype=$(readlink -f "$line/type.txt")
+
+    if test "/usr/libexec/device/services/db/postgresql/instance/type/primary.txt" == "${instancetype}"; then
+      postgresql-setup --initdb --unit="postgresql@${instance}" --port "${port}"
+    fi
+
+  fi
 }
 
 

@@ -96,6 +96,19 @@
               </sources>
             </mapping>
             <mapping>
+              <directory>/usr/libexec/device-syncdiscovery</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-syncdiscovery</location>
+                  <destination>postgresql</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
               <directory>/usr/libexec/device-postdiscovery</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>755</filemode>
@@ -176,6 +189,10 @@
                   <destination>postgresql-autodiscovery.service</destination>
                 </source>
                 <source>
+                  <location>target/classes/usr/lib/systemd/system/postgresql-syncdiscovery@.service</location>
+                  <destination>postgresql-syncdiscovery@.service</destination>
+                </source>
+                <source>
                   <location>target/classes/usr/lib/systemd/system/postgresql-postdiscovery.service</location>
                   <destination>postgresql-postdiscovery.service</destination>
                 </source>
@@ -213,6 +230,25 @@
                 </source>
                 <source>
                   <location>target/classes/usr/libexec/device/services/db/postgresql/instance/show</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/instance/type</directory>
+              <directoryIncluded>true</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+            </mapping>
+            <mapping>
+              <directory>/usr/libexec/device/services/db/postgresql/instance/type</directory>
+              <directoryIncluded>false</directoryIncluded>
+              <filemode>755</filemode>
+              <username>root</username>
+              <groupname>root</groupname>
+              <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device/services/db/postgresql/instance/type/primary.txt</location>
                 </source>
               </sources>
             </mapping>
