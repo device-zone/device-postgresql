@@ -89,7 +89,7 @@ while read line; do
 
   # ignore removed agreements
   if test -f "$line/removed"; then
-    /usr/bin/logger -t postgresql-autodiscovery "Removing pg_basebackup from '${instance}', instance will stand alone."
+    /usr/bin/logger -t postgresql-autodiscovery "Removing streaming replication from '${instance}', instance will stand alone."
 
     augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
 set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
@@ -97,6 +97,8 @@ load
 rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/primary_conninfo
 save
 EOF
+
+    rm -f "/var/lib/pgsql/data-${instance}/standby.signal"
 
     # remove folder
     target=$(readlink -f "$line")
