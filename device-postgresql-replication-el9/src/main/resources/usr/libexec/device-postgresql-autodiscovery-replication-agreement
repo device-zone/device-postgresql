@@ -36,6 +36,7 @@ while read line; do
 
     if test "/usr/libexec/device/services/db/postgresql/instance/type/hot-standby.txt" != "${instancetype}"; then
       /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has a replication agreement, but the instance is not a 'hot-standy', ignoring."
+      echo "Replication agreemments can only be set on 'host-standby' instances." > ${line}/error
       continue;
     fi
 
@@ -58,6 +59,7 @@ while read line; do
 
     if test ! -L "$line/certificate.d"; then
       /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has hostname but no certificate, ignoring."
+      echo "When a hostname is set, a certificate is required." > ${line}/error
       continue;
     fi
 
@@ -71,6 +73,7 @@ while read line; do
     rm -f /run/postgresql/replica-ca-${uuid}.crt
     if test ! -L "$line/ca-certificate.crt"; then
       /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has hostname but no ca-certificate, ignoring."
+      echo "When a hostname is set, a ca-certificate is required." > ${line}/error
       continue;
     fi
 
@@ -107,15 +110,24 @@ EOF
     # avoid runuser complaints
     pushd /tmp
 
+    if test -d "/var/lib/pgsql/data-${instance}"; then
+      /usr/bin/logger -t postgresql-autodiscovery "Moving previous database instance ${instance} to /var/lib/pgsql/backups/..."
+      echo "Moving previous instance to backup directory" > ${line}/warning
+      mv --backup=numbered -t "/var/lib/pgsql/backups/" "/var/lib/pgsql/data-${instance}"
+    fi
+
     /usr/bin/logger -t postgresql-autodiscovery "Starting pg_basebackup into instance ${instance} for connection: ${conninfo}..."
+    echo "Backup synchronisation in progress" > ${line}/warning
 
     runuser -u postgres -- /usr/bin/pg_basebackup -d "${conninfo}" -D "/var/lib/pgsql/data-${instance}"
 
     /usr/bin/logger -t postgresql-autodiscovery "Verifying pg_basebackup into instance ${instance}..."
+    echo "Backup verification in progress" > ${line}/warning
 
     runuser -u postgres -- /usr/bin/pg_verifybackup "/var/lib/pgsql/data-${instance}"
 
     /usr/bin/logger -t postgresql-autodiscovery "Completed pg_basebackup into instance ${instance}."
+    rm -f ${line}/warning
 
     popd
 
