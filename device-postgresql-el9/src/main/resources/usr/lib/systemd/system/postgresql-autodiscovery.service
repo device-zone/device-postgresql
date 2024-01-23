@@ -2,17 +2,12 @@
 
 [Unit]
 Description=Postgresql Configuration Autodiscovery
-#Requires=postgresql.target
-PartOf=postgresql.target
-ReloadPropagatedFrom=postgresql.service
-Before=postgresql@.service
 After=firewalld.service
 
 [Service]
 Type=oneshot
-Environment=PGDATA=/var/lib/pgsql/data
-ExecStart=/bin/bash /usr/libexec/device-autodiscovery/postgresql
-ExecReload=/bin/bash /usr/libexec/device-autodiscovery/postgresql
+ExecStart=/bin/bash /usr/libexec/device-autodiscovery/postgresql start
+ExecReload=/bin/bash /usr/libexec/device-autodiscovery/postgresql reload
 RemainAfterExit=on
 
 [Install]
