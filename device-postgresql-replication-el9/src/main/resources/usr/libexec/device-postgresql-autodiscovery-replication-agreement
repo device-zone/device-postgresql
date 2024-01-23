@@ -1,0 +1,148 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script brings postgresql replicas into a synchronised state.
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
+#
+# Syncronise replication agreement
+
+find /etc/device/services/db/postgresql/replication/agreement/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/instance.d/name.txt"; then
+    continue;
+  elif test "${instance}" != "$(head -n 1 $line/instance.d/name.txt)"; then
+    continue;
+  fi
+
+  if test -f "$line/instance.d/disabled.bin"; then
+    continue;
+  fi
+
+  # basebackup the database - but only if we are hot-standby
+  if test -L "$line/instance.d/type.txt"; then
+
+    instancetype=$(readlink -f "$line/instance.d/type.txt")
+
+    if test "/usr/libexec/device/services/db/postgresql/instance/type/hot-standby.txt" != "${instancetype}"; then
+      /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has a replication agreement, but the instance is not a 'hot-standy', ignoring."
+      continue;
+    fi
+
+  fi
+
+  if test -f "$line/port.txt"; then
+    conninfo="port=$(head -n 1 $line/port.txt)"
+  else
+    conninfo="port=5432"
+  fi
+
+  if test -f "$line/hostname.txt"; then
+    conninfo+=" host=$(head -n 1 $line/hostname.txt)"
+
+    if test -f "$line/role.txt"; then
+      conninfo+=" user=$(head -n 1 $line/role.txt)"
+    else
+      conninfo+=" user=replication"
+    fi
+
+    if test ! -L "$line/certificate.d"; then
+      /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has hostname but no certificate, ignoring."
+      continue;
+    fi
+
+    target=$(readlink -f "$line/certificate.d")
+    uuid="$(basename $target)"
+
+    conninfo+=" sslmode=verify-full"
+    conninfo+=" sslcert=/run/postgresql/replica-${uuid}.crt"
+    conninfo+=" sslkey=/run/postgresql/replica-${uuid}.key"
+
+    rm -f /run/postgresql/replica-ca-${uuid}.crt
+    if test ! -L "$line/ca-certificate.crt"; then
+      /usr/bin/logger -t postgresql-autodiscovery "Instance '${instance}' has hostname but no ca-certificate, ignoring."
+      continue;
+    fi
+
+    # write out the ca certificates
+    redwax-tool --pem-in="$line/ca-certificate.crt" \
+                --group-out=postgres \
+                --root-out \
+                --pem-out="/run/postgresql/replica-ca-${uuid}.crt"
+
+    conninfo+=" sslrootcert=/run/postgresql/replica-ca-${uuid}.crt"
+
+  fi
+
+  # ignore removed agreements
+  if test -f "$line/removed"; then
+    /usr/bin/logger -t postgresql-autodiscovery "Removing pg_basebackup from '${instance}', instance will stand alone."
+
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/primary_conninfo
+save
+EOF
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+  # add new agreement
+  elif test -f "$line/added"; then
+
+    # avoid runuser complaints
+    pushd /tmp
+
+    /usr/bin/logger -t postgresql-autodiscovery "Starting pg_basebackup into instance ${instance} for connection: ${conninfo}..."
+
+    runuser -u postgres -- /usr/bin/pg_basebackup -d "${conninfo}" -D "/var/lib/pgsql/data-${instance}"
+
+    /usr/bin/logger -t postgresql-autodiscovery "Verifying pg_basebackup into instance ${instance}..."
+
+    runuser -u postgres -- /usr/bin/pg_verifybackup "/var/lib/pgsql/data-${instance}"
+
+    /usr/bin/logger -t postgresql-autodiscovery "Completed pg_basebackup into instance ${instance}."
+
+    popd
+
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/primary_conninfo '${conninfo}'
+save
+EOF
+
+    rm -f "$line/added"
+
+  # update agreement
+  elif test -f "$line/updated"; then
+
+    /usr/bin/logger -t postgresql-autodiscovery "Updating instance ${instance} with connection: ${conninfo}..."
+
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/primary_conninfo '${conninfo}'
+save
+EOF
+
+    rm -f "$line/updated"
+
+  fi
+
+done
+

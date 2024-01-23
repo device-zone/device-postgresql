@@ -1,0 +1,21 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+OPTIONS="--mark index --index index"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+#  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-syncdiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-autodiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-postdiscovery.service
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+

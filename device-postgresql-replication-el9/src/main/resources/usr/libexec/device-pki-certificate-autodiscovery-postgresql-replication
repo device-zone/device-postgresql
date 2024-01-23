@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#
+# PKI Certificates Autodiscovery - postgresql replication
+# =======================================================
+#
+# This script detects certificates for postgesql replication.
+
+set -e
+umask 0027
+
+if test ! -d /run/postgresql/; then
+  exit 0;
+fi
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+uuid="${2}"
+
+#
+# Configure certs/keys
+
+if test "${request}" == "start" -o "${request}" == "reload" -o "${request}" == "restart"; then
+
+  find /etc/device/services/db/postgresql/replication/replica/ -mindepth 1 -maxdepth 1 -type l | \
+  while read line; do
+
+    if test ! -f "$line/instance.d/name.txt"; then
+      continue;
+    else
+      instance="$(head -n 1 $line/instance.d/name.txt)"
+    fi
+
+    if test ! -L "$line/certificate.d"; then
+      continue;
+    else
+      target=$(readlink -f "$line/certificate.d")
+      if test "${uuid}" != "$(basename $target)"; then
+        continue;
+      fi
+    fi
+
+    logger -t pki-certificate@${uuid} "${request}ing postgresql replication certificate/key..."
+
+    rm -f "/run/postgresql/replicate-${uuid}.crt"
+    rm -f "/run/postgresql/replicate-${uuid}.key"
+    rm -f "/run/postgresql/replicate-${uuid}.yaml"
+
+    redwax-tool --pem-in="/run/pki-certificate/certificate-${uuid}.pem" \
+                --group-out=postgres \
+	        --cert-out --chain-out --no-key-out \
+                --pem-out="/run/postgresql/replicate-${uuid}.crt" \
+                --no-cert-out --no-chain-out --key-out \
+                --pem-out="/run/postgresql/replicate-${uuid}.key" \
+                --cert-out --chain-out --format-out=yaml \
+                --metadata-out="/run/postgresql/replicate-${uuid}.yaml"
+
+    logger -t pki-certificate@${uuid} "${request}ed postgresql replication certificate/key."
+
+  done
+
+elif test "${request}" == "stop"; then
+
+  rm -f "/run/postgresql/replicate-${uuid}.crt"
+  rm -f "/run/postgresql/replicate-${uuid}.key"
+  rm -f "/run/postgresql/replicate-${uuid}.yaml"
+
+fi
+
+

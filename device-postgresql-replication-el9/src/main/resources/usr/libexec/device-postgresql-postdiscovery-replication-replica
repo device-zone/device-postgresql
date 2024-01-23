@@ -1,0 +1,76 @@
+#!/bin/bash
+  
+#
+# Postgresql Postdiscovery
+# ========================
+#
+# This script autogenerates any required postgresql replication roles.
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+
+#
+# Silence warnings with runuser.
+cd /tmp
+
+
+#
+# Add/remove postgresql replication roles
+
+find /etc/device/services/db/postgresql/replication/replica/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/name.txt"; then
+    continue;
+  fi
+
+  if test ! -f "$line/instance.d/name.txt"; then
+    continue;
+  else
+    instance="$(head -n 1 $line/instance.d/name.txt)"
+  fi
+  if test ! -f "$line/instance.d/port.txt"; then
+    port="5432"
+  else
+    port="$(head -n 1 $line/instance.d/port.txt)"
+  fi
+  if test ! -f "$line/role.txt"; then
+    role="replication"
+  else
+    role="$(head -n 1 $line/role.txt)"
+  fi
+
+  # remove old replication users
+  if test -f "$line/removed"; then
+
+    # remove role
+    logger -t postgresql-postdiscovery "Notice: removing role '${role}' from postgresql port ${tlsport}..."
+    echo "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN DROP ROLE ${role}; END IF; END \$\$;" | runuser -u postgres -- /usr/bin/psql --port=${port}  > /dev/null 2>&1
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+  # add new replication users
+  elif test -f "$line/added"; then
+
+    # add local user if needed
+    logger -t postgresql-postdiscovery "Notice: adding role '${role}' to postgresql port ${tlsport}..."
+    echo "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} WITH LOGIN REPLICATION; END IF; END \$\$;" | runuser -u postgres -- /usr/bin/psql --port=${port}  > /dev/null 2>&1
+
+    rm -f "$line/added"
+
+  # update certificates
+  elif test -f "$line/updated"; then
+
+    rm -f "$line/updated"
+
+  fi
+
+done
+

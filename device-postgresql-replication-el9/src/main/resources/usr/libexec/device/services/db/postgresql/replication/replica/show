@@ -1,0 +1,20 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf -- "${tmpdir}"' EXIT
+
+OPTIONS="--show name --hostname name --show-flags disabled --show-table name,instance,max-wal-senders,wal-keep-size,max-replication-slots --flag X --polar disabled --integer-minimum 0 --integer max-wal-senders --integer-minimum 0 --integer wal-keep-size --integer-minimum 0 --integer max-replication-slots --required --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+

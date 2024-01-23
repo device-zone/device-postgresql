@@ -1,0 +1,5 @@
+if [ $1 = 0 ]; then
+  /usr/bin/systemctl stop postgresql-backup.service
+  /usr/bin/systemctl disable postgresql-backup.service
+fi
+

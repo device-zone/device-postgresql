@@ -1,0 +1,17 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+OPTIONS="--show index --index index --show-flags disabled --show-table index,instance,hostname,port,certificate,ca-certificate --flag X --polar disabled --port port --fqdn hostname --required --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+

@@ -1,0 +1,22 @@
+#!/bin/sh
+  
+set -e
+umask 0002
+
+OPTIONS="--add index --index index --polar disabled --fqdn hostname --required --port port --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+
+if [ "$1" == "--" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+#  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-syncdiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-autodiscovery.service
+  /usr/bin/sudo /usr/bin/systemctl --no-block try-reload-or-restart postgresql-postdiscovery.service
+
+elif [ "$1" == "-c" ]; then
+
+  /usr/libexec/device-set ${OPTIONS} "$@"
+
+fi
+
+

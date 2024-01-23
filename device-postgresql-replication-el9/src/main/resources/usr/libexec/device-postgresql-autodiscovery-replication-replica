@@ -1,0 +1,145 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script autogenerates replication configuration.
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
+disable_replication() {
+
+  instance="${1}"
+
+  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/wal_level
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/archive_mode
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/archive_command
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/max_wal_senders
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/wal_keep_size
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/hot_standby
+rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/max_replication_slots
+save
+EOF
+
+}
+
+enable_replication() {
+
+  instance="${1}"
+  line="${2}"
+
+  max_wal_senders=10
+  if test -f "$line/max-wal-senders.txt"; then
+    max_wal_senders="$(head -n 1 $line/max-wal-senders.txt)"
+  fi
+
+  wal_keep_size=5000
+  if test -f "$line/wal-keep-size.txt"; then
+    wal_keep_size="$(head -n 1 $line/wal-keep-size.txt)"
+  fi
+
+  max_replication_slots=5
+  if test -f "$line/max-replication-slots.txt"; then
+    max_replication_slots="$(head -n 1 $line/max-replication-slots.txt)"
+  fi
+
+  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
+load
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/wal_level replica
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/archive_mode on
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/archive_command '/bin/true'
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/max_wal_senders ${max_wal_senders}
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/wal_keep_size ${wal_keep_size}
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/hot_standby on
+set /files/var/lib/pgsql/data-${instance}/postgresql.conf/max_replication_slots ${max_replication_slots}
+save
+EOF
+
+}
+
+#
+# Add/remove replica
+
+find /etc/device/services/db/postgresql/replication/replica/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/instance.d/name.txt"; then
+    continue;
+  elif test "${instance}" != "$(head -n 1 $line/instance.d/name.txt)"; then
+    continue;
+  fi
+
+  if test ! -f "$line/disabled.bin"; then
+
+    # update pg_hba.conf
+    cat >> "${instance}-hba.conf" <<- EOF
+# Added by $0 on `date`
+# device services db postgresql replication replica show
+#
+hostssl replication     replication     all     cert    map=replication clientname=DN
+
+EOF
+
+  fi
+
+  # remove old certificates
+  if test -f "$line/removed"; then
+
+    disable_replication "${instance}"
+
+    systemctl --no-block try-restart "postgresql@${instance}"
+
+    # remove folder
+#    target=$(readlink -f "$line")
+#    rm -f "${target}"/*
+#    rmdir "${target}"
+#    rm -f "${line}"
+
+  # add new certificates
+  elif test -f "$line/added"; then
+
+    if test -f "$line/disabled.bin"; then
+
+      disable_replication "${instance}"
+
+    else
+
+      enable_replication "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-restart "postgresql@${instance}"
+
+#    rm -f "$line/added"
+
+  # update certificates
+  elif test -f "$line/updated"; then
+
+    if test -f "$line/disabled.bin"; then
+
+      disable_replication "${instance}"
+
+    else
+
+      enable_replication "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-restart "postgresql@${instance}"
+
+#    rm -f "$line/updated"
+
+  fi
+
+done
+

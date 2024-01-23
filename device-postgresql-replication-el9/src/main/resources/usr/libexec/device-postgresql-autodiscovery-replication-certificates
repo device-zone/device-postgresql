@@ -1,0 +1,116 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script autogenerates replication certificates in pg_ident.conf.
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
+if test -f /run/postgresql/client-ca.crt; then
+
+  # update pg_ident.conf
+  cat >> "${instance}-ident.conf" <<- EOF
+# Added by $0 on `date`
+# device services db postgresql replication certificates
+#
+
+EOF
+
+else
+
+  # not enabled, leave
+  exit 0
+
+fi
+
+
+add_certificate() {
+
+  instance="${1}"
+  line="${2}"
+
+  subject=
+  if test -f "$line/subject.txt"; then
+    subject="$(head -n 1 $line/subject.txt)"
+  fi
+
+  if test -n "${subject}"; then
+
+    # update pg_ident.conf
+    cat >> "${instance}-ident.conf" <<- EOF
+replication	"${subject}"	replication
+EOF
+
+  fi
+}
+
+#
+# Add/remove certificate mappings
+
+find /etc/device/services/db/postgresql/replication/certificates/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/tls.d/instance.d/name.txt"; then
+    continue;
+  elif test "${instance}" != "$(head -n 1 $line/tls.d/instance.d/name.txt)"; then
+    continue;
+  fi
+
+  # remove old certificates
+  if test -f "$line/removed"; then
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+  # add new certificates
+  elif test -f "$line/added"; then
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    rm -f "$line/added"
+
+  # update certificates
+  elif test -f "$line/updated"; then
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
+
+    rm -f "$line/updated"
+
+  # no changes
+  else
+
+    if test ! -f "$line/disabled.bin"; then
+
+      add_certificate "${instance}" "${line}"
+
+    fi
+
+  fi
+
+done
+
+
