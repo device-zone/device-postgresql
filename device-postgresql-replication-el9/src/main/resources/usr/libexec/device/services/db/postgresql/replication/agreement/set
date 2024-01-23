@@ -3,7 +3,7 @@
 set -e
 umask 0002
 
-OPTIONS="--set index --index index --polar disabled --fqdn hostname --required --port port --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate"
+OPTIONS="--set index --index index --polar disabled --fqdn hostname --symlink-base /etc/pki/tls/certs --symlink-suffix .crt --symlink ca-certificate --relation-base /etc/device/system/pki/certificates --relation-name name --relation-suffix .txt --relation certificate --required --port port --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance"
 
 if [ "$1" == "--" ]; then
 
