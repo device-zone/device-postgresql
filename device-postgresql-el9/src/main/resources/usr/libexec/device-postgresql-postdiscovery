@@ -8,11 +8,9 @@
 
 set -e
 
-request="${1}"
+exec 2> >(logger -t ${0})
 
-#
-# Silence warnings with runuser.
-cd /tmp
+request="${1}"
 
 #
 # Handle the cleanup
@@ -38,14 +36,14 @@ logger -t "postgresql-postdiscovery" "running postdiscovery for postgresql serve
 
 find "$0.d" -type f -executable | sort | \
 while read x; do
-  "$x" "${request}" < /dev/null || touch error;
+  "$x" "${request}" < /dev/null || echo -n "$x" > error;
 done
 
 if test ! -f "error"; then
   logger -t "postgresql-postdiscovery" "completed postdiscovery for postgresql servers."
   exit 0
 else
-  logger -t "postgresql-postdiscovery" "failed postdiscovery for postgresql servers."
+  logger -t "postgresql-postdiscovery" "failed postdiscovery for postgresql servers in ${error}."
   exit 1
 fi
 

@@ -1,0 +1,170 @@
+#!/bin/bash
+  
+#
+# Postgresql Autodiscovery
+# ========================
+#
+# This script creates and removes instances.
+
+set -e
+
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
+#
+# Create instance that does not yet exist
+create_instance() {
+
+  request="${1}"
+  instance="${2}"
+  line="${3}"
+
+  if test ! -f "$line/port.txt"; then
+    port=5432;
+  else
+    port="$(head -n 1 $line/port.txt)"
+  fi
+
+  # 5432 is already there
+  if test "${port}" != "5432"; then
+    /usr/sbin/semanage port -a -t postgresql_port_t -p tcp ${port}
+  fi
+
+  install -o root -g root -m 755 -d "/etc/systemd/system/postgresql@${instance}.service.d"
+
+  cat >> local.conf <<- EOF
+[Unit]
+Before=postgresql-postdiscovery.service
+After=postgresql-autodiscovery@${instance}.service
+
+[Service]
+Environment=PGDATA=/var/lib/pgsql/data-${instance}
+EOF
+
+  install -o root -g root -m 644 local.conf "/etc/systemd/system/postgresql@${instance}.service.d"
+
+  systemctl daemon-reload
+
+  # init the database - but only if we are primary
+  if test -L "$line/type.txt"; then
+
+    instancetype=$(readlink -f "$line/type.txt")
+
+    if test "/usr/libexec/device/services/db/postgresql/instance/type/primary.txt" == "${instancetype}"; then
+      postgresql-setup --initdb --unit="postgresql@${instance}" --port "${port}"
+    fi
+
+  fi
+}
+
+
+#
+# Remove existing instance
+remove_instance() {
+
+  request="${1}"
+  instance="${2}"
+  line="${3}"
+
+  rm -f "/etc/systemd/system/postgresql@${instance}.service.d/local.conf"
+  if test -d "/etc/systemd/system/postgresql@${instance}.service.d"; then
+    rmdir "/etc/systemd/system/postgresql@${instance}.service.d"
+  fi
+
+  if test -d "/var/lib/pgsql/data-${instance}"; then
+    mv --backup=numbered -t "/var/lib/pgsql/backups/" "/var/lib/pgsql/data-${instance}"
+  fi
+
+  if test ! -f "$line/port.txt"; then
+    port=5432;
+  else
+    port="$(head -n 1 $line/port.txt)"
+  fi
+
+  # 5432 is already there
+  if test "${port}" != "5432"; then
+    /usr/sbin/semanage port -d -t postgresql_port_t -p tcp ${port}
+  fi
+
+}
+
+#
+# Add/remove postgres instances
+
+find /etc/device/services/db/postgresql/instance/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/name.txt"; then
+    continue;
+  elif test "${instance}" != "$(head -n 1 $line/name.txt)"; then
+    continue;
+  fi
+
+  # remove old instances
+  if test -f "$line/removed"; then
+
+    logger -t postgresql-autodiscovery "removing postgresql server instance ${instance}..."
+
+    systemctl stop "postgresql@${instance}"
+
+    remove_instance "${request}" "${instance}" "${line}"
+    logger -t postgresql-autodiscovery "removed postgresql server instance ${instance}."
+
+    # remove folder
+    target=$(readlink -f "$line")
+    rm -f "${target}"/*
+    rmdir "${target}"
+    rm -f "${line}"
+
+    systemctl --no-block stop "postgresql-autodiscovery@${instance}"
+
+  # add new instances
+  elif test -f "$line/added"; then
+
+    logger -t postgresql-autodiscovery "creating postgresql server instance ${instance}..."
+    create_instance "${request}" "${instance}" "${line}"
+    logger -t postgresql-autodiscovery "created postgresql server instance ${instance}."
+
+    if test ! -f "$line/disabled.bin" -a -d "/var/lib/pgsql/data-${instance}"; then
+
+      systemctl --no-block start "postgresql@${instance}"
+
+    fi
+
+    rm -f "$line/added"
+
+  # update instances
+  elif test -f "$line/updated"; then
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl --no-block stop "postgresql@${instance}"
+
+    elif test -d "/var/lib/pgsql/data-${instance}"; then
+
+      systemctl --no-block restart "postgresql@${instance}"
+
+    fi
+
+    rm -f "$line/updated"
+
+  # something we depend on changed
+  else
+
+    if test -f "$line/disabled.bin"; then
+
+      systemctl --no-block stop "postgresql@${instance}"
+
+    elif test -d "/var/lib/pgsql/data-${instance}"; then
+
+      systemctl --no-block restart "postgresql@${instance}"
+
+    fi
+
+  fi
+
+done
+
+

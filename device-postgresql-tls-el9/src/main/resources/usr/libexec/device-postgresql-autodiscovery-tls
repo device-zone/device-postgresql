@@ -8,17 +8,24 @@
 
 set -e
 
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
 disable_tls() {
 
   instance="${1}"
 
-  listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''"
-  ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off"
-  ssl_cert_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file"
-  ssl_key_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file"
-  ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
+  if test -d "/var/lib/pgsql/data-${instance}"; then
 
-  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+    listen_addresses="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses"
+    ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl off"
+    ssl_cert_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file"
+    ssl_key_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file"
+    ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
+
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
 set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
 load
 ${listen_addresses}
@@ -29,6 +36,7 @@ ${ssl_ca_file}
 save
 EOF
 
+  fi
 }
 
 enable_tls() {
@@ -37,30 +45,32 @@ enable_tls() {
   uuid="${2}"
   line="${3}"
 
-  listen_addresses="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses"
-  if test -f "$line/protocol.txt"; then
-    protocol="$(head -n 1 $line/protocol.txt)"
-    if test "${protocol}" == "all"; then
-      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'"
-    elif test "${protocol}" == "ipv4-only"; then
-      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '0.0.0.0'"
-    elif test "${protocol}" == "ipv6-only"; then
-      listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '::'"
+  if test -d "/var/lib/pgsql/data-${instance}"; then
+
+    listen_addresses="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses"
+    if test -f "$line/protocol.txt"; then
+      protocol="$(head -n 1 $line/protocol.txt)"
+      if test "${protocol}" == "all"; then
+        listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '*'"
+      elif test "${protocol}" == "ipv4-only"; then
+        listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '0.0.0.0'"
+      elif test "${protocol}" == "ipv6-only"; then
+        listen_addresses="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses '::'"
+      fi
     fi
-  fi
 
-  # enabled until further notice
-  ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on"
-  ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
-  ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
+    # enabled until further notice
+    ssl="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl on"
+    ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
+    ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
 
-  if test -f /run/postgresql/client-ca.crt; then
-    ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
-  else
-    ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
-  fi
+    if test -f /run/postgresql/client-ca.crt; then
+      ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
+    else
+      ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
+    fi
 
-  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
 set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
 load
 ${listen_addresses}
@@ -71,6 +81,7 @@ ${ssl_ca_file}
 save
 EOF
 
+  fi
 }
 
 #
@@ -81,9 +92,10 @@ while read line; do
 
   if test ! -f "$line/instance.d/name.txt"; then
     continue;
-  else
-    instance="$(head -n 1 $line/instance.d/name.txt)"
+  elif test "${instance}" != "$(head -n 1 $line/instance.d/name.txt)"; then
+    continue;
   fi
+
   if test ! -L "$line/certificate.d"; then
     uuid=""
   else
@@ -162,6 +174,8 @@ EOF
     rm -f "$line/updated"
 
   fi
+
+  exit 0
 
 done
 

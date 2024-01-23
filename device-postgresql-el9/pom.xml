@@ -96,19 +96,6 @@
               </sources>
             </mapping>
             <mapping>
-              <directory>/usr/libexec/device-syncdiscovery</directory>
-              <directoryIncluded>false</directoryIncluded>
-              <filemode>755</filemode>
-              <username>root</username>
-              <groupname>root</groupname>
-              <sources>
-                <source>
-                  <location>target/classes/usr/libexec/device-postgresql-syncdiscovery</location>
-                  <destination>postgresql</destination>
-                </source>
-              </sources>
-            </mapping>
-            <mapping>
               <directory>/usr/libexec/device-postdiscovery</directory>
               <directoryIncluded>false</directoryIncluded>
               <filemode>755</filemode>
@@ -135,6 +122,10 @@
               <username>root</username>
               <groupname>root</groupname>
               <sources>
+                <source>
+                  <location>target/classes/usr/libexec/device-postgresql-autodiscovery-create</location>
+                  <destination>05-create</destination>
+                </source>
                 <source>
                   <location>target/classes/usr/libexec/device-postgresql-autodiscovery-port</location>
                   <destination>10-port</destination>
@@ -189,8 +180,8 @@
                   <destination>postgresql-autodiscovery.service</destination>
                 </source>
                 <source>
-                  <location>target/classes/usr/lib/systemd/system/postgresql-syncdiscovery@.service</location>
-                  <destination>postgresql-syncdiscovery@.service</destination>
+                  <location>target/classes/usr/lib/systemd/system/postgresql-autodiscovery@.service</location>
+                  <destination>postgresql-autodiscovery@.service</destination>
                 </source>
                 <source>
                   <location>target/classes/usr/lib/systemd/system/postgresql-postdiscovery.service</location>

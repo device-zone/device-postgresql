@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #
-# PKI Certificates Autodiscovery - postgresql
-# ===========================================
+# PKI Certificates Autodiscovery - postgresql tls
+# ===============================================
 #
-# This script detects certificates for postgesql.
+# This script detects certificates for postgesql tls.
 
 set -e
 umask 0027
@@ -21,43 +21,44 @@ uuid="${2}"
 #
 # Configure certs/keys
 
-if test "${request}" == "start" -o "${request}" == "reload"; then
+if test "${request}" == "start" -o "${request}" == "reload" -o "${request}" == "restart"; then
 
-  logger -t pki-certificate@${uuid} "importing postgresql server certificate/key..."
+  find /etc/device/services/db/postgresql/tls/ -mindepth 1 -maxdepth 1 -type l | \
+  while read line; do
 
-  line="/etc/device/system/pki/certificates/${uuid}"
+    if test ! -f "$line/instance.d/name.txt"; then
+      continue;
+    else
+      instance="$(head -n 1 $line/instance.d/name.txt)"
+    fi
 
-  if test -f "$line/filter-dns.txt"; then
-    filter+=" --filter-hostname=$(head -n 1 $line/filter-dns.txt)"
-  fi
-  if test -f "$line/filter-mail.txt"; then
-    filter+=" --filter-email=$(head -n 1 $line/filter-mail.txt)"
-  fi
-  if test -z "${filter}"; then
-    filter+=" --filter-hostname=$(hostname -f)"
-  fi
-  if test -L "$line/filter-ca-cert.crt"; then
-    pem+=" --pem-in=$line/filter-ca-cert.crt"
-  fi
+    if test ! -L "$line/certificate.d"; then
+      continue;
+    else
+      target=$(readlink -f "$line/certificate.d")
+      if test "${uuid}" != "$(basename $target)"; then
+        continue;
+      fi
+    fi
 
-  rm -f "/run/postgresql/server-${uuid}.crt"
-  rm -f "/run/postgresql/server-${uuid}.key"
-  rm -f "/run/postgresql/server-${uuid}.yaml"
+    logger -t pki-certificate@${uuid} "${request}ing postgresql tls certificate/key..."
 
-  redwax-tool ${pem} \
-              --pem-in="/etc/pki/tls/private/*" \
-              --pem-in="/etc/pki/tls/certs/*.pem" \
-              --filter=verify ${filter} \
-              --filter-current \
-              --group-out=postgres \
-	      --cert-out --chain-out --no-key-out \
-              --pem-out="/run/postgresql/server-${uuid}.crt" \
-              --no-cert-out --no-chain-out --key-out \
-              --pem-out="/run/postgresql/server-${uuid}.key" \
-              --cert-out --chain-out --format-out=yaml \
-              --metadata-out="/run/postgresql/server-${uuid}.yaml"
+    rm -f "/run/postgresql/server-${uuid}.crt"
+    rm -f "/run/postgresql/server-${uuid}.key"
+    rm -f "/run/postgresql/server-${uuid}.yaml"
 
-  logger -t pki-certificate@${uuid} "imported postgresql server certificate/key."
+    redwax-tool --pem-in="/run/pki-certificate/certificate-${uuid}.pem" \
+                --group-out=postgres \
+	        --cert-out --chain-out --no-key-out \
+                --pem-out="/run/postgresql/server-${uuid}.crt" \
+                --no-cert-out --no-chain-out --key-out \
+                --pem-out="/run/postgresql/server-${uuid}.key" \
+                --cert-out --chain-out --format-out=yaml \
+                --metadata-out="/run/postgresql/server-${uuid}.yaml"
+
+    logger -t pki-certificate@${uuid} "${request}ed postgresql tls certificate/key."
+
+  done
 
 elif test "${request}" == "stop"; then
 

@@ -3,7 +3,7 @@
 set -e
 umask 0002
 
-OPTIONS="--show name --show-table name,port,type --sql-id name --port port --symlink-base /usr/libexec/device/services/db/postgresql/instance/type --symlink-suffix .txt --symlink type"
+OPTIONS="--show name --show-flags disabled --flag X --show-table name,port,type --sql-id name --port port --polar disabled --symlink-base /usr/libexec/device/services/db/postgresql/instance/type --symlink-suffix .txt --symlink type"
 
 if [ "$1" == "--" ]; then
 

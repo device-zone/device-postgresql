@@ -8,6 +8,11 @@
 
 set -e
 
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
 if test -f /run/postgresql/client-ca.crt; then
 
   # update pg_ident.conf
@@ -57,8 +62,8 @@ while read line; do
 
   if test ! -f "$line/tls.d/instance.d/name.txt"; then
     continue;
-  else
-    instance="$(head -n 1 $line/tls.d/instance.d/name.txt)"
+  elif test "${instance}" != "$(head -n 1 $line/tls.d/instance.d/name.txt)"; then
+    continue;
   fi
 
   # remove old certificates
@@ -111,6 +116,8 @@ while read line; do
     fi
 
   fi
+
+  exit 0
 
 done
 

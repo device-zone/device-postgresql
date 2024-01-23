@@ -9,6 +9,11 @@
 set -e
 umask 0007
 
+exec 2> >(logger -t ${0})
+
+request="${1}"
+instance="${2}"
+
 
 #
 # Handle the cleanup
@@ -27,103 +32,27 @@ cd "${tmpdir}"
 
 
 #
-# Create instance that does not yet exist
-create_instance() {
-  instance="${1}"
-  line="${2}"
+# Per instance? Run all scripts
 
-  if test ! -f "$line/port.txt"; then
-    port=5432;
-  else
-    port="$(head -n 1 $line/port.txt)"
-  fi
+if [ $# -ge 2 ]; then
 
-  # 5432 is already there
-  if test "${port}" != "5432"; then
-    /usr/sbin/semanage port -a -t postgresql_port_t -p tcp ${port}
-  fi
-
-  install -o root -g root -m 755 -d "/etc/systemd/system/postgresql@${instance}.service.d"
-
-  cat >> local.conf <<- EOF
-[Unit]
-Before=postgresql-postdiscovery.service
-After=postgresql-autodiscovery.service
-
-[Service]
-Environment=PGDATA=/var/lib/pgsql/data-${instance}
-EOF
-
-  install -o root -g root -m 644 local.conf "/etc/systemd/system/postgresql@${instance}.service.d"
-
-  systemctl daemon-reload
-
-  # init the database - but only if we are primary
-  if test -L "$line/type.txt"; then
-
-    instancetype=$(readlink -f "$line/type.txt")
-
-    if test "/usr/libexec/device/services/db/postgresql/instance/type/primary.txt" == "${instancetype}"; then
-      postgresql-setup --initdb --unit="postgresql@${instance}" --port "${port}"
-    fi
-
-  fi
-}
-
-
-#
-# Remove existing instance
-remove_instance() {
-  instance="${1}"
-  line="${2}"
-
-  rm -f "/etc/systemd/system/postgresql@${instance}.service.d/local.conf"
-  if test -d "/etc/systemd/system/postgresql@${instance}.service.d"; then
-    rmdir "/etc/systemd/system/postgresql@${instance}.service.d"
-  fi
-
-  if test -d "/var/lib/pgsql/data-${instance}"; then
-    mv --backup=numbered -t "/var/lib/pgsql/backups/" "/var/lib/pgsql/data-${instance}"
-  fi
-
-  if test ! -f "$line/port.txt"; then
-    port=5432;
-  else
-    port="$(head -n 1 $line/port.txt)"
-  fi
-
-  # 5432 is already there
-  if test "${port}" != "5432"; then
-    /usr/sbin/semanage port -d -t postgresql_port_t -p tcp ${port}
-  fi
-
-}
-
-
-#
-# Per application? Run all scripts
-
-run_scripts() {
-
-  instance="${1}"
-  line="${2}"
-
-  logger -t "postgresql-autodiscovery@${instance}" "running autodiscovery for postgresql instance ${instance}..."
-
-  rm -f "${line}/warning"
+  logger -t "postgresql-autodiscovery" "running autodiscovery for postgresql instance ${instance}..."
 
   find "$0.d" -type f -executable | sort | \
   while read x; do
-    "$x" "${instance}" "${line}" < /dev/null || touch error;
+    "$x" "${request}" "${instance}" < /dev/null || echo -n "$x" > error;
+
+    if test -f "error"; then
+      logger -t "postgresql-autodiscovery" "failed autodiscovery for postgresql instance ${instance} in ${x}."
+      exit 1
+    fi
   done
 
-  if test ! -f "error"; then
-    logger -t "postgresql-autodiscovery@${instance}" "completed autodiscovery for postgresql instance ${instance}."
-  else
-    logger -t "postgresql-autodiscovery@${instance}" "failed autodiscovery for postgresql instance ${instance}."
-  fi
+  logger -t "postgresql-autodiscovery" "completed autodiscovery for postgresql instance ${instance}."
 
-}
+  exit 0
+
+fi
 
 
 #
@@ -132,85 +61,12 @@ run_scripts() {
 find /etc/device/services/db/postgresql/instance/ -mindepth 1 -maxdepth 1 -type l | \
 while read line; do
 
-  target=$(readlink -f "$line")
-
   if test ! -f "$line/name.txt"; then
     continue;
   fi
   instance="$(head -n 1 $line/name.txt)"
 
-  # remove old instances
-  if test -f "$line/removed"; then
-
-    logger -t postgresql-autodiscovery "removing postgresql server instance ${instance}..."
-
-    systemctl disable "postgresql@${instance}"
-    systemctl stop "postgresql@${instance}"
-
-    remove_instance "${instance}" "${line}"
-    logger -t postgresql-autodiscovery "removed postgresql server instance ${instance}."
-
-    # remove folder
-    rm -f "${target}"/*
-    rmdir "${target}"
-    rm -f "${line}"
-
-  # add new instances
-  elif test -f "$line/added"; then
-
-    logger -t postgresql-autodiscovery "creating postgresql server instance ${instance}..."
-    create_instance "${instance}" "${line}"
-    run_scripts "${instance}" "${line}"
-    logger -t postgresql-autodiscovery "created postgresql server instance ${instance}."
-
-    if test -f "$line/disabled.bin"; then
-
-      systemctl disable "postgresql@${instance}"
-      systemctl stop "postgresql@${instance}"
-
-    else
-
-      systemctl enable "postgresql@${instance}"
-      systemctl --no-block start "postgresql@${instance}"
-
-    fi
-
-    rm -f "$line/added"
-
-  # update instances
-  elif test -f "$line/updated"; then
-
-    instance="$(head $line/name.txt)"
-
-    if test -f "$line/disabled.bin"; then
-
-      systemctl disable "postgresql@${instance}"
-      systemctl --no-block stop "postgresql@${instance}"
-
-      run_scripts "${instance}" "${line}"
-
-    else
-
-      run_scripts "${instance}" "${line}"
-
-      systemctl enable "postgresql@${instance}"
-      systemctl --no-block start "postgresql@${instance}"
-
-    fi
-
-    rm -f "$line/updated"
-
-  # something we depend on changed
-  else
-
-    instance="$(head $line/name.txt)"
-
-    run_scripts "${instance}" "${line}"
-
-    systemctl --no-block try-reload-or-restart "postgresql@${instance}"
-
-  fi
+  systemctl --no-block restart "postgresql-autodiscovery@${instance}"
 
 done
-
 

@@ -11,10 +11,6 @@ set -e
 exec 2> >(logger -t ${0})
 
 #
-# Silence warnings with runuser.
-cd /tmp
-
-#
 # Add/remove TLS
 
 find /etc/device/services/db/postgresql/tls/ -mindepth 1 -maxdepth 1 -type l | \

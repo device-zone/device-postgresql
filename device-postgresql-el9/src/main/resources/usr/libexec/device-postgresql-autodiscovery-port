@@ -1,9 +1,22 @@
 #!/bin/bash
 
-if [ $# -eq 2 ]; then
+exec 2> >(logger -t ${0})
 
-  instance="${1}"
-  line="${2}"
+request="${1}"
+instance="${2}"
+
+if [ $# -lt 2 ]; then
+  exit 1
+fi
+
+find /etc/device/services/db/postgresql/instance/ -mindepth 1 -maxdepth 1 -type l | \
+while read line; do
+
+  if test ! -f "$line/name.txt"; then
+    continue;
+  elif test "${instance}" != "$(head -n 1 $line/name.txt)"; then
+    continue;
+  fi
 
   if test ! -f "$line/port.txt"; then
     port=5432;
@@ -11,15 +24,18 @@ if [ $# -eq 2 ]; then
     port="$(head -n 1 $line/port.txt)"
   fi
 
-  #
-  # Handle ports
-  augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
+  if test -d "/var/lib/pgsql/data-${instance}"; then
+
+    #
+    # Handle ports
+    augtool <<-EOF | /usr/bin/logger -t postgresql-autodiscovery
 set /augeas/load/Postgresql/incl[last()+1] "/var/lib/pgsql/data-*/postgresql.conf"
 load
 set /files/var/lib/pgsql/data-${instance}/postgresql.conf/port ${port}
-set /files/var/lib/pgsql/data-${instance}/postgresql.conf/listen_addresses ''
 save
 EOF
 
-fi
+  fi
+
+done
 
