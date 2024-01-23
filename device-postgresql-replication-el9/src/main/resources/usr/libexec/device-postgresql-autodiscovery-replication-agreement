@@ -138,6 +138,8 @@ set /files/var/lib/pgsql/data-${instance}/postgresql.conf/primary_conninfo '${co
 save
 EOF
 
+    touch "/var/lib/pgsql/data-${instance}/standby.signal"
+
     rm -f "$line/added"
 
   # update agreement
