@@ -7,7 +7,7 @@
 # This script detects certificates for postgesql replication.
 
 set -e
-umask 0027
+umask 0007
 
 if test ! -d /run/postgresql/; then
   exit 0;
@@ -48,8 +48,8 @@ if test "${request}" == "start" -o "${request}" == "reload" -o "${request}" == "
     rm -f "/run/postgresql/replicate-${uuid}.yaml"
 
     redwax-tool --pem-in="/run/pki-certificate/certificate-${uuid}.pem" \
-                --group-out=postgres \
-	        --cert-out --chain-out --no-key-out \
+                --user-out=postgres \
+                --cert-out --chain-out --no-key-out \
                 --pem-out="/run/postgresql/replicate-${uuid}.crt" \
                 --no-cert-out --no-chain-out --key-out \
                 --pem-out="/run/postgresql/replicate-${uuid}.key" \
