@@ -173,6 +173,19 @@ EOF
 
     rm -f "$line/updated"
 
+  # refresh config on server start
+  else
+
+    if test -f "$line/disabled.bin" -o -z "${uuid}"; then
+
+      disable_tls "${instance}"
+
+    else
+
+      enable_tls "${instance}" "${uuid}" "${line}"
+
+    fi
+
   fi
 
   exit 0
