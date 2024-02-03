@@ -8,7 +8,7 @@
 
   <artifactId>device-postgresql</artifactId>
   <groupId>zone.device.platform</groupId>
-  <version>1.0.10</version>
+  <version>1.0.11-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>device postgresql package</name>
   <description>Packaging for the Postgresql appliance</description>
@@ -23,7 +23,7 @@
     <connection>scm:git:https://github.com/device-zone/device-postgresql.git</connection>
     <developerConnection>scm:git:https://github.com/device-zone/device-postgresql.git</developerConnection>
     <url>https://github.com/device-zone/device-postgresql/</url>
-    <tag>device-postgresql-1.0.10</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <modules>
