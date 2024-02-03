@@ -43,18 +43,18 @@ if test "${request}" == "start" -o "${request}" == "reload" -o "${request}" == "
 
     logger -t pki-certificate@${uuid} "${request}ing postgresql replication certificate/key..."
 
-    rm -f "/run/postgresql/replicate-${uuid}.crt"
-    rm -f "/run/postgresql/replicate-${uuid}.key"
-    rm -f "/run/postgresql/replicate-${uuid}.yaml"
+    rm -f "/run/postgresql/replica-${uuid}.crt"
+    rm -f "/run/postgresql/replica-${uuid}.key"
+    rm -f "/run/postgresql/replica-${uuid}.yaml"
 
     redwax-tool --pem-in="/run/pki-certificate/certificate-${uuid}.pem" \
                 --user-out=postgres \
                 --cert-out --chain-out --no-key-out \
-                --pem-out="/run/postgresql/replicate-${uuid}.crt" \
+                --pem-out="/run/postgresql/replica-${uuid}.crt" \
                 --no-cert-out --no-chain-out --key-out \
-                --pem-out="/run/postgresql/replicate-${uuid}.key" \
+                --pem-out="/run/postgresql/replica-${uuid}.key" \
                 --cert-out --chain-out --format-out=yaml \
-                --metadata-out="/run/postgresql/replicate-${uuid}.yaml"
+                --metadata-out="/run/postgresql/replica-${uuid}.yaml"
 
     logger -t pki-certificate@${uuid} "${request}ed postgresql replication certificate/key."
 
@@ -62,9 +62,9 @@ if test "${request}" == "start" -o "${request}" == "reload" -o "${request}" == "
 
 elif test "${request}" == "stop"; then
 
-  rm -f "/run/postgresql/replicate-${uuid}.crt"
-  rm -f "/run/postgresql/replicate-${uuid}.key"
-  rm -f "/run/postgresql/replicate-${uuid}.yaml"
+  rm -f "/run/postgresql/replica-${uuid}.crt"
+  rm -f "/run/postgresql/replica-${uuid}.key"
+  rm -f "/run/postgresql/replica-${uuid}.yaml"
 
 fi
 
