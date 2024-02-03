@@ -7,7 +7,7 @@
 # This script detects certificates for postgesql replication.
 
 set -e
-umask 0007
+umask 0077
 
 if test ! -d /run/postgresql/; then
   exit 0;
