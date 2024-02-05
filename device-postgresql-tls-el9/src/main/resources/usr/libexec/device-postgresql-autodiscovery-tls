@@ -112,15 +112,6 @@ while read line; do
                 --root-out \
                 --pem-out="/run/postgresql/client-ca.crt"
 
-    # update pg_hba.conf
-    cat >> "${instance}-hba.conf" <<- EOF
-# Added by $0 on `date`
-# device services db postgresql tls ca-certificate=*
-#
-hostssl all     all     all     cert    map=certificate clientname=DN
-
-EOF
-
   fi
 
   # remove old certificates

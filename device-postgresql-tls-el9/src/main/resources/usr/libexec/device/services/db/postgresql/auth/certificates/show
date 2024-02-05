@@ -6,7 +6,7 @@ umask 0002
 tmpdir="$(mktemp -d)"
 trap 'rm -rf -- "${tmpdir}"' EXIT
 
-OPTIONS="--show name --hostname name --show-flags disabled --show-table name,tls,subject,role --flag X --polar disabled --distinguished-name subject --sql-delimited-id role --required --relation-base /etc/device/services/db/postgresql/tls --relation-name name --relation-suffix .txt --relation tls"
+OPTIONS="--show name --hostname name --show-flags disabled --show-table name,instance,database,subject,role --flag X --polar disabled --distinguished-name subject --sql-delimited-id role --relation-base /etc/device/services/db/postgresql/database --relation-name name --relation-suffix .txt --relation database --required --relation-base /etc/device/services/db/postgresql/instance --relation-name name --relation-suffix .txt --relation instance"
 
 if [ "$1" == "--" ]; then
 

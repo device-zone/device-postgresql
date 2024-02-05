@@ -15,12 +15,18 @@ instance="${2}"
 
 if test -f /run/postgresql/client-ca.crt; then
 
+  # update pg_hba.conf
+  cat >> "${instance}-hba.conf" <<- EOF
+# Added by $0 on `date`
+# device services db postgresql auth certificates *
+#
+EOF
+
   # update pg_ident.conf
   cat >> "${instance}-ident.conf" <<- EOF
 # Added by $0 on `date`
-# device services db postgresql auth certificates
+# device services db postgresql auth certificates *
 #
-
 EOF
 
 else
@@ -36,6 +42,16 @@ add_certificate() {
   instance="${1}"
   line="${2}"
 
+  certname=
+  if test -f "$line/name.txt"; then
+    certname="$(head -n 1 $line/name.txt)"
+  fi
+
+  database=all
+  if test -f "$line/database.d/database-name.txt"; then
+    database="\"$(head -n 1 $line/database.d/database-name.txt)\""
+  fi
+
   role=
   if test -f "$line/role.txt"; then
     role="$(head -n 1 $line/role.txt)"
@@ -47,12 +63,20 @@ add_certificate() {
   fi
 
   if test -n "${subject}" -a -n "${role}"; then
+
     # update pg_ident.conf
     cat >> "${instance}-ident.conf" <<- EOF
-certificate	"${subject}"	"${role}"
+certificate-${certname}	"${subject}"	"${role}"
 EOF
+
+    # update pg_hba.conf
+    cat >> "${instance}-hba.conf" <<- EOF
+hostssl ${database}     ${role}     all     cert    map=certificate-${certname} clientname=DN
+EOF
+
   fi
 }
+
 
 #
 # Add/remove certificate mappings
@@ -60,9 +84,11 @@ EOF
 find /etc/device/services/db/postgresql/auth/certificates/ -mindepth 1 -maxdepth 1 -type l | \
 while read line; do
 
-  if test ! -f "$line/tls.d/instance.d/name.txt"; then
+  if test ! -f "$line/instance.d/name.txt"; then
     continue;
-  elif test "${instance}" != "$(head -n 1 $line/tls.d/instance.d/name.txt)"; then
+  elif test "${instance}" != "$(head -n 1 $line/instance.d/name.txt)"; then
+    continue;
+  elif test -f "$line/database.d/instance.d/name.txt" -a "${instance}" != "$(head -n 1 $line/database.d/instance.d/name.txt)"; then
     continue;
   fi
 
@@ -120,5 +146,15 @@ while read line; do
   exit 0
 
 done
+
+# update pg_hba.conf
+cat >> "${instance}-hba.conf" <<- EOF
+
+EOF
+
+# update pg_ident.conf
+cat >> "${instance}-ident.conf" <<- EOF
+
+EOF
 
 
