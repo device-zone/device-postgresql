@@ -13,7 +13,7 @@ exec 2> >(logger -t ${0})
 request="${1}"
 instance="${2}"
 
-if test -f /run/postgresql/client-ca.crt; then
+if test -f /run/postgresql/client-ca-${instance}.crt; then
 
   # update pg_hba.conf
   cat >> "${instance}-hba.conf" <<- EOF

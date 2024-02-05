@@ -64,8 +64,8 @@ enable_tls() {
     ssl_cert_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_cert_file /run/postgresql/server-${uuid}.crt"
     ssl_key_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_key_file /run/postgresql/server-${uuid}.key"
 
-    if test -f /run/postgresql/client-ca.crt; then
-      ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca.crt"
+    if test -f /run/postgresql/client-ca-${instance}.crt; then
+      ssl_ca_file="set /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file /run/postgresql/client-ca-${instance}.crt"
     else
       ssl_ca_file="rm /files/var/lib/pgsql/data-${instance}/postgresql.conf/ssl_ca_file"
     fi
@@ -103,14 +103,14 @@ while read line; do
     uuid="$(basename $target)"
   fi
 
-  rm -f /run/postgresql/client-ca.crt
+  rm -f /run/postgresql/client-ca-${instance}.crt
   if test -L "$line/ca-certificate.crt"; then
 
     # write out the ca certificates
     redwax-tool --pem-in="$line/ca-certificate.crt" \
                 --group-out=postgres \
                 --root-out \
-                --pem-out="/run/postgresql/client-ca.crt"
+                --pem-out="/run/postgresql/client-ca-${instance}.crt"
 
   fi
 
