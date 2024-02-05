@@ -42,7 +42,7 @@ enable_replication() {
     max_wal_senders="$(head -n 1 $line/max-wal-senders.txt)"
   fi
 
-  wal_keep_size=5000
+  wal_keep_size=100
   if test -f "$line/wal-keep-size.txt"; then
     wal_keep_size="$(head -n 1 $line/wal-keep-size.txt)"
   fi
