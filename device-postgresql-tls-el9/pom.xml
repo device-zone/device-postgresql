@@ -4,7 +4,7 @@
   <parent>
     <artifactId>device-postgresql</artifactId>
     <groupId>zone.device.platform</groupId>
-    <version>1.0.14-SNAPSHOT</version>
+    <version>1.0.14</version>
   </parent>
 
   <properties>
@@ -18,7 +18,7 @@
 
   <artifactId>device-postgresql-tls</artifactId>
   <groupId>zone.device.platform.el9</groupId>
-  <version>1.0.14-SNAPSHOT</version>
+  <version>1.0.14</version>
   <packaging>rpm</packaging>
   <name>device postgresql applicance tls extension for el9</name>
   <description>Packaging for the Postgresql appliance tls extension for ${release.distribution}</description>
