@@ -4,7 +4,7 @@
   <parent>
     <artifactId>device-postgresql</artifactId>
     <groupId>zone.device.platform</groupId>
-    <version>1.0.14</version>
+    <version>1.0.15-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -18,7 +18,7 @@
 
   <artifactId>device-postgresql-backup</artifactId>
   <groupId>zone.device.platform.el9</groupId>
-  <version>1.0.14</version>
+  <version>1.0.15-SNAPSHOT</version>
   <packaging>rpm</packaging>
   <name>device postgresql applicance backup extension for el9</name>
   <description>Packaging for the Postgresql appliance backup extension for ${release.distribution}</description>
