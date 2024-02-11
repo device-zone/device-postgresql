@@ -66,12 +66,12 @@ add_certificate() {
 
     # update pg_ident.conf
     cat >> "${instance}-ident.conf" <<- EOF
-certificate-${certname}	"${subject}"	"${role}"
+certificate-${role}	"${subject}"	"${role}"
 EOF
 
     # update pg_hba.conf
     cat >> "${instance}-hba.conf" <<- EOF
-hostssl ${database}     ${role}     all     cert    map=certificate-${certname} clientname=DN
+hostssl ${database}     ${role}     all     cert    map=certificate-${role} clientname=DN
 EOF
 
   fi
