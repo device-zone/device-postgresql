@@ -102,10 +102,9 @@ while read line; do
     rm -f "${target}"/*
     rmdir "${target}"
     rm -f "${line}"
-  fi
 
   # add new certificates
-  if test -f "$line/added"; then
+  elif test -f "$line/added"; then
 
     if test ! -f "$line/disabled.bin"; then
 
@@ -117,10 +116,8 @@ while read line; do
 
     rm -f "$line/added"
 
-  fi
-
   # update certificates
-  if test -f "$line/updated"; then
+  elif test -f "$line/updated"; then
 
     if test ! -f "$line/disabled.bin"; then
 
@@ -142,8 +139,6 @@ while read line; do
     fi
 
   fi
-
-  exit 0
 
 done
 
